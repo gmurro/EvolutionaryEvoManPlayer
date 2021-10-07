@@ -25,6 +25,17 @@ In the [multi_evolution](https://github.com/karinemiras/evoman_framework/blob/ma
 ## Notes for the competition
 - Any changes you make to the provided network code, e.g., normalization changes, will be reflected on your version, but not in ours, and thus might harm the performance of your provided solution. Therefore, do not make any changes.
 
+## How update fitness score?
+To change the default implementation of `cons_multi` without editing the evoman folder, you should redefine a new function:
+```python
+def my_cons_multi(self,values):
+ return values.mean()
+```
+and overwriting the old one:
+```python
+env.cons_multi = my_cons_multi
+```
+
 ## Notes for executions
 You will have two EAs implemented (EA1 and EA2). 
 Also you will pick 2 groups of individuals of arbitrary size (group1 and group2). You will perform evolution on both groups, with both algorithms, so that is a total of 4 combinations (EA1 group1, EA1 group2, EA2 group1, EA2 group2). During evolution, you still record in each case the mean and max fitness. You will repeat each run 10 times. For each run, you will store the best performing individual of that experiment. When you have all your repetitions, you will create plots showing the mean of the mean and the mean of the max with the respective stds across the 10 runs. This is essentially the same as for assignment 1.
@@ -34,3 +45,4 @@ Now, however, you will take the best individuals, which will be 10 (runs) * 2 (E
 When you run your experiments with 10 repetitions for a number of generations, for each repetition please record a history of the population mean fitness and maximum fitness for each generation. Then, as you have 10 of these records, please take the mean of the mean across all runs, the std of the means (NOT the mean of the stds), and the mean of the maximum values, also with std. This should result in 4 lines, each with a shaded area around them. A nice way to realize this kind of plot is by using seaborn (check this link (Links to an external site.) (Links to an external site.)). This requires you to have all the records in a pandas dataframe, which I can highly recommend using for this purpose.
 
 Now, the best candidates, no matter what generation they showed up, should be tested against the respective enemy 5 times.  From the 5 results, you then make the average, so you again have 10 average performances of the best solution. These 10 values you should have 6 times (3 enemies, 2 EAs), and put them in 3 boxplots, one per enemy. If you ask me, you can also use a grouped boxplot. Here, I can again recommend to use seaborn, which makes the generation of the plot a piece of cake if your data is nicely arranged in a pandas dataframe (check this link (Links to an external site.) (Links to an external site.)).
+
