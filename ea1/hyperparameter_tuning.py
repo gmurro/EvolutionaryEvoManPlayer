@@ -7,7 +7,7 @@ import os
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 os.environ["SDL_VIDEODRIVER"] = "dummy"
-from ea1.genetic_optimization import GeneticOptimizer
+from genetic_optimization import GeneticOptimizer
 from game_runner import GameRunner
 from multilayer_controller import PlayerController
 from hyperopt import hp, fmin, tpe
