@@ -17,8 +17,8 @@ class GameRunner:
     def __init__(
         self,
         controller,
+        enemies,
         experiment_name="",
-        enemies=[2],
         level=2,
         speed="fastest",
         headless=True,
@@ -31,10 +31,8 @@ class GameRunner:
         self.experiment_name = (
             experiment_name
             if experiment_name != ""
-            else f"logs/Run {datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            else f"runs/logs/Run {datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
-        # Creates a directory for the experiment's logs
-        Path(self.experiment_name).mkdir(parents=True, exist_ok=True)
         self.level = level
         self.speed = speed
         if headless:
@@ -43,6 +41,7 @@ class GameRunner:
                 experiment_name=self.experiment_name,
                 enemies=self.enemies,
                 playermode="ai",
+                multiplemode="yes",
                 player_controller=self.controller,
                 enemymode="static",
                 level=self.level,
@@ -53,9 +52,12 @@ class GameRunner:
                 randomini="yes",
             )
         else:
+            # Creates a directory for the experiment's logs
+            Path(self.experiment_name).mkdir(parents=True, exist_ok=True)
             self.env = Environment(
                 experiment_name=self.experiment_name,
                 enemies=self.enemies,
+                multiplemode="yes",
                 playermode="ai",
                 player_controller=self.controller,
                 enemymode="static",

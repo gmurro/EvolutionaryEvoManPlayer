@@ -9,7 +9,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 from genetic_optimization import GeneticOptimizer
 from game_runner import GameRunner
-from multilayer_controller import PlayerController
+from singlelayer_controller import PlayerController
 from hyperopt import hp, fmin, tpe
 from hyperopt import SparkTrials
 

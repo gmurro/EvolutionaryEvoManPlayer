@@ -3,7 +3,7 @@ import pandas as pd
 
 sys.path.insert(0, "evoman")
 from environment import Environment
-from multilayer_controller import PlayerController
+from singlelayer_controller import PlayerController
 
 # imports other libs
 import numpy as np
