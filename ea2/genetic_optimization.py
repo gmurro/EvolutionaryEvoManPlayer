@@ -134,6 +134,28 @@ class GeneticOptimizer:
             population.append(individual)
         return population
 
+
+    def intermediate_crossover(self, parent1, parent2):
+        child1 = np.zeros(len(parent1))
+        child2 = np.zeros(len(parent1))
+
+        for i, (xi, yi) in enumerate(zip(parent1, parent2)):
+
+            w = np.random.rand(1)[0]
+
+            if xi < yi:
+                child1[i] = xi + w * (yi - xi)
+                child2[i] = yi
+            else:
+                child2[i] = xi + w * (yi - xi)
+                child1[i] = yi
+                
+        return child1, child2
+
+            
+
+
+
     def blend_crossover(self, individual1, individual2, alpha):
         """
         Mates two individuals, randomly choosing a crossover point and performing a blend crossover as seen in book at page 67.
