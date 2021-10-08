@@ -21,7 +21,7 @@ class GameRunner:
         experiment_name="",
         level=2,
         speed="fastest",
-        headless=True,
+        headless=False,
     ):
         """
         This class instantiates an EVOMAN environment, runs the game and evaluates the fitness.
@@ -41,7 +41,7 @@ class GameRunner:
                 experiment_name=self.experiment_name,
                 enemies=self.enemies,
                 playermode="ai",
-                multiplemode="no",
+                multiplemode="yes",
                 player_controller=self.controller,
                 enemymode="static",
                 level=self.level,
@@ -57,13 +57,16 @@ class GameRunner:
             self.env = Environment(
                 experiment_name=self.experiment_name,
                 enemies=self.enemies,
-                multiplemode="yes",
                 playermode="ai",
+                multiplemode="yes",
                 player_controller=self.controller,
                 enemymode="static",
                 level=self.level,
                 speed=self.speed,
-                randomini="yes",
+                logs="on",
+                savelogs="no",
+                sound="off",
+                randomini="yes"
             )
         self.env.state_to_log()
 
