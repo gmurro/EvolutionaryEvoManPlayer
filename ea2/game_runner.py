@@ -41,7 +41,7 @@ class GameRunner:
                 experiment_name=self.experiment_name,
                 enemies=self.enemies,
                 playermode="ai",
-                multiplemode="yes",
+                multiplemode="no",
                 player_controller=self.controller,
                 enemymode="static",
                 level=self.level,

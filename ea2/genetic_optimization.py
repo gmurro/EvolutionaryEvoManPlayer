@@ -11,7 +11,7 @@ from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = 1
+ENEMY = 2
 RUNS_DIR = "runs"
 
 
@@ -24,7 +24,7 @@ MUT_PROBABILITY = 0.62
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 75
+POPULATION_SIZE = 10
 GENERATIONS = 25
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
@@ -34,8 +34,7 @@ MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6
 ALPHA_FITNESS_SHARING = 1.0
 # [K. Deb. Multi-objective Optimization using Evolutionary Algorithms. Wiley, Chichester, UK, 2001]
-# suggests that a default value for the niche size should be in the range 5–10
-# set it to 0.0 to disable the fitness sharing algorithm
+# # set it to 0.0 to disable the fitness sharing algorithm
 NICHE_SIZE = 8.0
 
 
@@ -60,26 +59,7 @@ class GeneticOptimizer:
         checkpoint="checkpoint",
         parallel=False,
     ):
-        """
-        Initializes the Genetic Optimizer.
-            :param layer_nodes: The number of nodes in each layer. (list)
-            :param enemy: Number of the enemy to defeat. (int)
-            :param generations: The number of generations to run the GA for. (int)
-            :param cx_probability: The probability of crossover. (float, 0<=x<=1)
-            :param cx_alpha: Parameter of the crossover. Extent of the interval in which the new values can be drawn
-                for each attribute on both side of the parents’ attributes. (float)
-            :param tournsize: The size for the tournment in  the selection. (int)
-            :param mut_probability: The probability of mutation. (float, 0<=x<=1)ù
-            :param lambda_offspring: The scaling factor of the offspring size based on the population size
-            :param mut_mu: The mean of the normal distribution used for mutation. (float)
-            :param mut_step_size: The initial standard deviation of the normal distribution used for mutation. (float)
-            :param mut_indpb: The probability of an individual being mutated. (float, 0<=x<=1)
-            :param population_size: The size of the population. (int)
-            :param niche_size: The size of the niche considered to keep diversity with the fitness sharing.
-                                If it is 0.0, the fitness sharing will be disabled. (float)
-            :param checkpoint: The file name to save the checkpoint. (str)
-            :param game_runner: The EVOMAN game runner. (GameRunner)
-        """
+        
         self.layer_nodes = layer_nodes
         self.checkpoint = checkpoint
         self.enemy = enemy
@@ -134,14 +114,35 @@ class GeneticOptimizer:
             population.append(individual)
         return population
 
+
+    def intermediate_crossover(self, parent1, parent2):
+        child1 = {
+                "weights_and_biases": np.zeros(len(parent1['weights_and_biases'])),
+                "mut_step_size": parent1['mut_step_size'],
+                "fitness": None,
+                "individual_gain": None,
+            }
+        child2 = {
+                "weights_and_biases": np.zeros(len(parent2['weights_and_biases'])),
+                "mut_step_size": parent1['mut_step_size'],
+                "fitness": None,
+                "individual_gain": None,
+            }
+
+        for i, (xi, yi) in enumerate(zip(parent1['weights_and_biases'], parent2['weights_and_biases'])):
+            w = np.random.rand(1)[0]
+
+            if xi < yi:
+                child1['weights_and_biases'][i] = xi + w * (yi - xi)
+                child2['weights_and_biases'][i] = yi
+            else:
+                child2['weights_and_biases'][i] = xi + w * (yi - xi)
+                child1['weights_and_biases'][i] = yi
+   
+        return child1, child2
+
     def blend_crossover(self, individual1, individual2, alpha):
-        """
-        Mates two individuals, randomly choosing a crossover point and performing a blend crossover as seen in book at page 67.
-            :param individual1: The first parent. (np.array)
-            :param individual2: The second parent. (np.array)
-            :param alpha: Extent of the interval in which the new values can be drawn for each attribute on both side
-                of the parents’ attributes. (float)
-        """
+   
         # For each weight/bias in the array, we decide a random shift quantity
         assert len(individual1["weights_and_biases"]) == len(
             individual2["weights_and_biases"]
@@ -219,10 +220,7 @@ class GeneticOptimizer:
         # We have to define also an evaluation to compute the fitness sharing, if it is enabled
         if self.niche_size > 0:
             if not self.parallel:
-                print(
-                    f"Evolutionary process started using the 'Fitness sharing' method with niche_size={self.niche_size}"
-                )
-
+                print("not parallel")
         checkpoint_path = os.path.join(
             RUNS_DIR,
             "enemy_" + str(self.enemy),
@@ -239,7 +237,7 @@ class GeneticOptimizer:
                     self.logbook = cp["logbook"]
                     random.setstate(cp["rndstate"])
                     print(
-                        f"We got a checkpoint and the sizes coincide! Starting from generation no. {self.start_gen}"
+                        "d"
                     )
                 else:
                     print(
@@ -471,9 +469,14 @@ class GeneticOptimizer:
 
                 # apply mutation between the parents in a non-deterministic way
                 if random.random() < self.cx_probability:
-                    offspring[i - 1], offspring[i] = self.blend_crossover(
-                        offspring[i - 1], offspring[i], self.cx_alpha
+                    # offspring[i - 1], offspring[i] = self.blend_crossover(
+                    #     offspring[i - 1], offspring[i], self.cx_alpha
+                    # )
+
+                    offspring[i - 1], offspring[i] = self.intermediate_crossover(
+                        offspring[i - 1], offspring[i]
                     )
+
                     offspring[i - 1]["fitness"] = None
                     offspring[i]["fitness"] = None
 
