@@ -46,7 +46,7 @@ class GameRunner:
                 enemymode="static",
                 level=self.level,
                 speed=self.speed,
-                logs="off",
+                logs="on",
                 savelogs="no",
                 sound="off",
                 randomini="yes",
