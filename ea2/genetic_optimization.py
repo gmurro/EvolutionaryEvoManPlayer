@@ -11,7 +11,7 @@ from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = 2
+#ENEMY = 2
 RUNS_DIR = "runs"
 
 
@@ -567,7 +567,7 @@ def run_optimization(run_number, enemy):
     Runs the experiment
     """
     game_runner = GameRunner(
-        PlayerController(LAYER_NODES), enemies=[enemy], headless=True
+        PlayerController(LAYER_NODES), enemies=enemy, headless=True
     )
     optimizer = GeneticOptimizer(
         population_size=POPULATION_SIZE,
