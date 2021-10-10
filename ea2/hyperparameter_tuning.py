@@ -9,13 +9,13 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 from genetic_optimization import GeneticOptimizer
 from game_runner import GameRunner
-from singlelayer_controller import PlayerController
+from multilayer_controller import PlayerController
 from hyperopt import hp, fmin, tpe
 from hyperopt import SparkTrials
 
 # fixed parameters
-ENEMY = 2
-GENERATIONS = 25
+ENEMY = [2, 5]
+GENERATIONS = 1
 LAMBDA = 7
 MUTATION_STEP_SIZE = 1.
 
@@ -26,9 +26,10 @@ def test_hyperparameters_vector(args):
     """
     layer_nodes = [20] + [int(nodes) for nodes in list(args["layer_nodes"])] + [5]
     print(f"Now trying combination {args}")
-    game_runner = GameRunner(PlayerController(layer_nodes), enemies=[ENEMY], headless=True)
+    game_runner = GameRunner(PlayerController(layer_nodes), enemies=ENEMY, headless=True)
     optimizer = GeneticOptimizer(
         layer_nodes=layer_nodes,
+        enemy=ENEMY,
         population_size=int(args["population_size"]),
         game_runner=game_runner,
         generations=GENERATIONS,
@@ -77,22 +78,6 @@ space = hp.choice(
                 hp.quniform("layer_3_3", 10, 30, 1),
             ],
             "mutation_indpb": hp.uniform("mutation_indpb_3", 0, 1),
-        },
-        {
-            "name": "4-layered NN",
-            "population_size": hp.quniform("population_size_4", 50, 100, 1),
-            "cx_probability": hp.uniform("cx_probability_4", 0.4, 1),
-            "cx_alpha": hp.uniform("cx_alpha_4", 0, 1),
-            "mut_probability": hp.uniform("mut_probability_4", 0, 0.6),
-            "niche_size": hp.quniform("niche_size_4", 5, 10, 1),
-            "tournsize": hp.quniform("tournsize_4", 5, 10, 1),
-            "layer_nodes": [
-                hp.quniform("layer_1_4", 10, 30, 1),
-                hp.quniform("layer_2_4", 10, 30, 1),
-                hp.quniform("layer_3_4", 10, 30, 1),
-                hp.quniform("layer_4_4", 10, 30, 1),
-            ],
-            "mutation_indpb": hp.uniform("mutation_indpb_4", 0, 1),
         },
     ],
 )
