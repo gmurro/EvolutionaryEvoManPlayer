@@ -3,6 +3,7 @@ logs/*
 checkpoint
 .idea
 hyperopt/*
+ea2/runs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

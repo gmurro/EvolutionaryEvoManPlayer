@@ -10,13 +10,13 @@ from scipy.spatial import distance_matrix
 from tabulate import tabulate
 import pandas as pd
 
-N_RUN = 11
-ENEMY = 2
+N_RUN = 3
+#ENEMY = 2
 RUNS_DIR = "runs"
 
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
-LAYER_NODES = [20, 20, 24, 5]
+LAYER_NODES = [20, 32, 32, 5]
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.75
 CX_ALPHA = 0.45
@@ -24,8 +24,8 @@ MUT_PROBABILITY = 0.62
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 10
-GENERATIONS = 25
+POPULATION_SIZE = 7
+GENERATIONS = 3
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
 LAMBDA = 7  # literature advise to use LAMBDA=5-7
@@ -567,7 +567,7 @@ def run_optimization(run_number, enemy):
     Runs the experiment
     """
     game_runner = GameRunner(
-        PlayerController(LAYER_NODES), enemies=[enemy], headless=True
+        PlayerController(LAYER_NODES), enemies=enemy, headless=True
     )
     optimizer = GeneticOptimizer(
         population_size=POPULATION_SIZE,

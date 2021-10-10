@@ -46,3 +46,6 @@ When you run your experiments with 10 repetitions for a number of generations, f
 
 Now, the best candidates, no matter what generation they showed up, should be tested against the respective enemy 5 times.  From the 5 results, you then make the average, so you again have 10 average performances of the best solution. These 10 values you should have 6 times (3 enemies, 2 EAs), and put them in 3 boxplots, one per enemy. If you ask me, you can also use a grouped boxplot. Here, I can again recommend to use seaborn, which makes the generation of the plot a piece of cake if your data is nicely arranged in a pandas dataframe (check this link (Links to an external site.) (Links to an external site.)).
 
+### Experiments
+Good tested enemies:
+- [1, 5, 7, 8]

@@ -11,6 +11,25 @@ sys.path.insert(0, "evoman")
 from environment import Environment
 import os
 from pathlib import Path
+import numpy as np
+
+
+# redefine multiple function for env
+def custom_multiple(self, pcont, econt):
+    vfitness, vplayerlife, venemylife, vtime = [], [], [], []
+    for e in self.enemies:
+        fitness, playerlife, enemylife, time = self.run_single(e, pcont, econt)
+        vfitness.append(fitness)
+        vplayerlife.append(playerlife)
+        venemylife.append(enemylife)
+        vtime.append(time)
+
+    vfitness = self.cons_multi(np.array(vfitness))
+    vplayerlife = sum(vplayerlife)
+    venemylife = sum(venemylife)
+    vtime = self.cons_multi(np.array(vtime))
+
+    return vfitness, vplayerlife, venemylife, vtime
 
 
 class GameRunner:
@@ -35,6 +54,9 @@ class GameRunner:
         )
         self.level = level
         self.speed = speed
+
+        # redefine the method multiple for env
+        Environment.multiple = custom_multiple
         if headless:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
             self.env = Environment(
@@ -51,6 +73,7 @@ class GameRunner:
                 sound="off",
                 randomini="yes",
             )
+
         else:
             # Creates a directory for the experiment's logs
             Path(self.experiment_name).mkdir(parents=True, exist_ok=True)
@@ -65,6 +88,7 @@ class GameRunner:
                 speed=self.speed,
                 randomini="yes",
             )
+
         self.env.state_to_log()
 
     def evaluate(self, individual):
