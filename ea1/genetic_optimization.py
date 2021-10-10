@@ -11,7 +11,7 @@ from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = [1, 2, 5]
+ENEMY = [1, 5, 7, 8]
 RUNS_DIR = "runs"
 
 
@@ -19,18 +19,20 @@ RUNS_DIR = "runs"
 # The last HAS TO BE the number of outputs. The middle HAS TO BE the number of nodes in the hidden layer.
 LAYER_NODES = [20, 10, 5]
 
+LAMBDA_REGULARIZATION = 0.01
+
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.85
 CX_ALPHA = 0.35
-MUT_PROBABILITY = 0.62
+MUT_PROBABILITY = 0.42
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 100
+POPULATION_SIZE = 20
 GENERATIONS = 20
 SAVING_FREQUENCY = 3
 TOURNSIZE = 5
-LAMBDA = 7  # literature advise to use LAMBDA=5-7
+LAMBDA = 5  # literature advise to use LAMBDA=5-7
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6
@@ -137,6 +139,7 @@ class GeneticOptimizer:
             }
             population.append(individual)
         return population
+
 
     def blend_crossover(self, individual1, individual2, alpha):
         """
@@ -318,7 +321,14 @@ class GeneticOptimizer:
         """
         fitnesses = map(self.game_runner.evaluate, population)
         for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
-            ind["fitness"] = fit
+            # compute regularization term l2
+            weights_slice = LAYER_NODES[0] * LAYER_NODES[1] + LAYER_NODES[1]
+            weights = np.concatenate([
+                                        ind["weights_and_biases"][LAYER_NODES[1]:weights_slice]
+                                      , ind["weights_and_biases"][weights_slice + LAYER_NODES[2]:]
+                                      ])
+
+            ind["fitness"] = fit - sum([w**2 for w in weights])*LAMBDA_REGULARIZATION
             ind["individual_gain"] = player_life - enemy_life
 
     def compute_fitness_sharing_for_individuals(self, population):
