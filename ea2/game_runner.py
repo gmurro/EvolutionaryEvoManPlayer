@@ -13,6 +13,11 @@ import os
 from pathlib import Path
 
 
+def my_cons_multi(values):
+    values_mean =  values.mean() - values.std()
+
+    return (values_mean,values)
+
 class GameRunner:
     def __init__(
         self,
@@ -21,7 +26,7 @@ class GameRunner:
         experiment_name="",
         level=2,
         speed="fastest",
-        headless=False,
+        headless=True,
     ):
         """
         This class instantiates an EVOMAN environment, runs the game and evaluates the fitness.
@@ -68,6 +73,8 @@ class GameRunner:
                 sound="off",
                 randomini="yes"
             )
+
+        self.env.cons_multi = my_cons_multi
         self.env.state_to_log()
 
     def evaluate(self, individual):
@@ -78,5 +85,6 @@ class GameRunner:
 
         fitness, player_life, enemy_life, time = self.env.play(pcont=individual["weights_and_biases"])
         return fitness, player_life, enemy_life, time
+
 
 
