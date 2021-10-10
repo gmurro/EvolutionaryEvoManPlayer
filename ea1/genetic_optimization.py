@@ -5,30 +5,34 @@ from game_runner import GameRunner
 import pickle
 import os
 from tqdm import tqdm
-from multilayer_controller import PlayerController
+from singlelayer_controller import PlayerController
 from scipy.spatial import distance_matrix
 from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = 1
+ENEMY = [1, 5, 7, 8]
 RUNS_DIR = "runs"
 
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
-LAYER_NODES = [20, 20, 24, 5]
+# The last HAS TO BE the number of outputs. The middle HAS TO BE the number of nodes in the hidden layer.
+LAYER_NODES = [20, 10, 5]
+
+LAMBDA_REGULARIZATION = 0.01
+
 # Then, we can instantiate the Genetic Hyperparameters.
-CX_PROBABILITY = 0.75
-CX_ALPHA = 0.45
-MUT_PROBABILITY = 0.62
+CX_PROBABILITY = 0.85
+CX_ALPHA = 0.35
+MUT_PROBABILITY = 0.42
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 75
-GENERATIONS = 25
+POPULATION_SIZE = 20
+GENERATIONS = 20
 SAVING_FREQUENCY = 3
-TOURNSIZE = 7
-LAMBDA = 7  # literature advise to use LAMBDA=5-7
+TOURNSIZE = 5
+LAMBDA = 5  # literature advise to use LAMBDA=5-7
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6
@@ -36,14 +40,14 @@ ALPHA_FITNESS_SHARING = 1.0
 # [K. Deb. Multi-objective Optimization using Evolutionary Algorithms. Wiley, Chichester, UK, 2001]
 # suggests that a default value for the niche size should be in the range 5–10
 # set it to 0.0 to disable the fitness sharing algorithm
-NICHE_SIZE = 8.0
+NICHE_SIZE = 10.0
 
 
 class GeneticOptimizer:
     def __init__(
         self,
         game_runner,
-        enemy,
+        enemies,
         generations=GENERATIONS,
         layer_nodes=LAYER_NODES,
         cx_probability=CX_PROBABILITY,
@@ -63,7 +67,7 @@ class GeneticOptimizer:
         """
         Initializes the Genetic Optimizer.
             :param layer_nodes: The number of nodes in each layer. (list)
-            :param enemy: Number of the enemy to defeat. (int)
+            :param enemies: List of the enemies to defeat. (list)
             :param generations: The number of generations to run the GA for. (int)
             :param cx_probability: The probability of crossover. (float, 0<=x<=1)
             :param cx_alpha: Parameter of the crossover. Extent of the interval in which the new values can be drawn
@@ -82,10 +86,10 @@ class GeneticOptimizer:
         """
         self.layer_nodes = layer_nodes
         self.checkpoint = checkpoint
-        self.enemy = enemy
-        self.generations = generations
-        # The biases have to be the same amount of the nodes
+        self.enemies = enemies
+        # The biases have to be the same amount of the nodes without considering the first layer
         self.bias_no = np.sum(self.layer_nodes) - self.layer_nodes[0]
+        self.generations = generations
         self.cx_probability = cx_probability
         self.mut_probability = mut_probability
         self.population_size = population_size
@@ -100,10 +104,12 @@ class GeneticOptimizer:
         self.cx_alpha = cx_alpha
         self.logbook = {}
         self.run_number = run_number
+
         weights_no = 0
         for i in range(0, len(self.layer_nodes) - 1):
             weights_no += self.layer_nodes[i] * self.layer_nodes[i + 1]
         self.individual_size = weights_no + self.bias_no
+
         # compute the learning rate as suggested by the book
         # it is usually inversely proportional to the square root of the problem size
         self.learning_rate = 1 / (self.individual_size ** 0.5)
@@ -133,6 +139,7 @@ class GeneticOptimizer:
             }
             population.append(individual)
         return population
+
 
     def blend_crossover(self, individual1, individual2, alpha):
         """
@@ -212,7 +219,7 @@ class GeneticOptimizer:
         # Create the checkpoint directory  if it does not exist
         if not self.parallel:
             os.makedirs(
-                os.path.join(RUNS_DIR, "enemy_" + str(self.enemy), self.checkpoint),
+                os.path.join(RUNS_DIR, "enemy_" + str(self.enemies), self.checkpoint),
                 exist_ok=True,
             )
 
@@ -225,7 +232,7 @@ class GeneticOptimizer:
 
         checkpoint_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(self.enemy),
+            "enemy_" + str(self.enemies),
             self.checkpoint,
             self.checkpoint + "_run_" + str(self.run_number) + ".dat",
         )
@@ -314,7 +321,14 @@ class GeneticOptimizer:
         """
         fitnesses = map(self.game_runner.evaluate, population)
         for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
-            ind["fitness"] = fit
+            # compute regularization term l2
+            weights_slice = LAYER_NODES[0] * LAYER_NODES[1] + LAYER_NODES[1]
+            weights = np.concatenate([
+                                        ind["weights_and_biases"][LAYER_NODES[1]:weights_slice]
+                                      , ind["weights_and_biases"][weights_slice + LAYER_NODES[2]:]
+                                      ])
+
+            ind["fitness"] = fit - sum([w**2 for w in weights])*LAMBDA_REGULARIZATION
             ind["individual_gain"] = player_life - enemy_life
 
     def compute_fitness_sharing_for_individuals(self, population):
@@ -542,7 +556,7 @@ class GeneticOptimizer:
 
                 checkpoint_path = os.path.join(
                     RUNS_DIR,
-                    "enemy_" + str(self.enemy),
+                    "enemy_" + str(self.enemies),
                     self.checkpoint,
                     self.checkpoint + "_run_" + str(self.run_number) + ".dat",
                 )
@@ -559,16 +573,16 @@ class GeneticOptimizer:
         return self.find_best()
 
 
-def run_optimization(run_number, enemy):
+def run_optimization(run_number, enemies):
     """
     Runs the experiment
     """
     game_runner = GameRunner(
-        PlayerController(LAYER_NODES), enemies=[enemy], headless=True
+        PlayerController(LAYER_NODES[1]), enemies=enemies, headless=True
     )
     optimizer = GeneticOptimizer(
         population_size=POPULATION_SIZE,
-        enemy=enemy,
+        enemies=enemies,
         generations=GENERATIONS,
         game_runner=game_runner,
         run_number=run_number,
@@ -578,7 +592,7 @@ def run_optimization(run_number, enemy):
         # save the best individual in the best_individual.txt file
         best_individual_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(enemy),
+            "enemy_" + str(enemies),
             "best_individual_run_" + str(run_number) + ".txt",
         )
         np.savetxt(best_individual_path, best_individual["weights_and_biases"])
@@ -591,7 +605,7 @@ def run_optimization(run_number, enemy):
         logbook = optimizer.getLogbook()
         logbook_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(enemy),
+            "enemy_" + str(enemies),
             "logbook_run_" + str(run_number) + ".csv",
         )
         pd.DataFrame.from_dict(logbook, orient="index").to_csv(
