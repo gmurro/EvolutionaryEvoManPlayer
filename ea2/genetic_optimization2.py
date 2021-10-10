@@ -9,6 +9,7 @@ from multilayer_controller import PlayerController
 from scipy.spatial import distance_matrix
 from tabulate import tabulate
 import pandas as pd
+from functools import cmp_to_key
 
 N_RUN = 1
 # ENEMY = 2
@@ -312,7 +313,7 @@ class GeneticOptimizer:
         """
         fitnesses = map(self.game_runner.evaluate, population)
         for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
-            ind["fitness"] = fit[0]
+            ind["fitness"] = fit[1]
             ind["individual_gain"] = player_life[0] - enemy_life[0]
 
     def compute_fitness_sharing_for_individuals(self, population):
@@ -430,6 +431,101 @@ class GeneticOptimizer:
     def non_dominated_crowding(self,population):
         return population
 
+    def dominates(self, a, b):
+        af = a['fitnesses']
+        bf = b['fitnesses']
+        
+        out = False
+        
+        for a, b in zip(af, bf):
+            if a >= b:
+                out = True
+            else:
+                return False
+        return out
+
+    def fast_nondominated_sort(self, pop):
+        n = {str(a) : 0 for a in pop}
+        S = {str(a) : [] for a in pop}
+        F = [[]]
+        for p in pop:
+            for q in pop:
+                if self.dominates(p, q):
+                    S[str(p)].append(q)
+                elif self.dominates(q, p):
+                    n[str(p)] += 1
+            if n[str(p)] == 0:
+                F[0].append(p)
+                
+        i = 0
+        while True:
+            H = []
+            for p in F[i]:
+                for q in S[str(p)]:
+                    n[str(q)] -= 1
+                    if n[str(q)] == 0:
+                        H.append(q)
+            i += 1
+            F.append([])
+            F[i] = H
+            
+            if F[-1] == []:
+                break
+        return F[:-1]
+
+    def crowding_distance_assignment(f):
+        l = len(f)
+        
+        distances = {str(a) : 0 for a in f}
+        
+        for i in range(len(f[0]['fitnesses'])):
+            f = sorted(f, key = lambda x: x['fitnesses'][i], reverse = True)
+            distances[str(f[0])] = 10e9
+            distances[str(f[-1])] = 10e9
+            if len(f) >= 3:
+                for z in range(1, len(f)-1):          
+                    distances[str(f[z])] += (f[z+1]['fitnesses'][i]) - (f[z-1]['fitnesses'][i])
+        f2 = []
+        for o in f:
+            d = distances[str(o)]
+            o['dist'] = d
+            f2.append(o)
+        return f2
+
+
+    def compare(i, j):
+        if (i['rank'] < j['rank']) or ((i['rank'] == j['rank']) and i['dist'] > j['dist']):
+            return 1
+        else:
+            return -1
+
+    def get_next_pop(self, pop):
+        print("{}".format(pop))
+        out = []
+        
+        F = self.fast_nondominated_sort(pop)
+        
+        while len(out) < self.population_size:
+            rank = 0
+            for f in F:
+                v = self.crowding_distance_assignment(f)
+                d = []
+
+                for item in v:
+                    p = item
+                    p['rank'] = rank
+                    d.append(p)
+                    
+                out.extend(d)
+                
+                rank +=1
+        out = sorted(out, key=cmp_to_key(self.compare), reverse = True)
+
+        if len(out) > self.population_size:
+            print(out)
+            out = out[0:self.population_size]
+        return out
+    
     def evolve(self):
         """
         Runs the GA for a given number of generations.
@@ -533,7 +629,8 @@ class GeneticOptimizer:
             # (age-based selection)
 
             # self.population = self.non_dominated_crowding(offspring)
-            self.population = offspring
+            self.population = self.get_next_pop(offspring)
+        
 
             # We save every SAVING_FREQUENCY generations.
             if g % SAVING_FREQUENCY == 0 and not self.parallel:
