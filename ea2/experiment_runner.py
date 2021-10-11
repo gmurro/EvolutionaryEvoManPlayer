@@ -1,10 +1,10 @@
 from multiprocessing import Pool
 # from genetic_optimization import run_optimization
-from genetic_optimization2 import run_optimization
+from genetic_optimization import run_optimization
 
 START_RUN = 1
-END_RUN = 3
-ENEMY = [2,3]
+END_RUN = 1
+ENEMY = [1,2,5]
 
 
 def run_experiment(run_number):

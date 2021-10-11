@@ -9,14 +9,14 @@ from multilayer_controller import PlayerController
 from scipy.spatial import distance_matrix
 from tabulate import tabulate
 import pandas as pd
+from functools import cmp_to_key
 
-N_RUN = 3
-#ENEMY = 2
+N_RUN = 1
+# ENEMY = 2
 RUNS_DIR = "runs"
 
-
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
-LAYER_NODES = [20, 32, 32, 5]
+LAYER_NODES = [20, 20, 24, 5]
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.75
 CX_ALPHA = 0.45
@@ -24,42 +24,42 @@ MUT_PROBABILITY = 0.62
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 7
-GENERATIONS = 3
+POPULATION_SIZE = 20
+GENERATIONS = 5
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
-LAMBDA = 7  # literature advise to use LAMBDA=5-7
+LAMBDA = 5  # literature advise to use LAMBDA=5-7 ORIGINAL !
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6
 ALPHA_FITNESS_SHARING = 1.0
 # [K. Deb. Multi-objective Optimization using Evolutionary Algorithms. Wiley, Chichester, UK, 2001]
 # # set it to 0.0 to disable the fitness sharing algorithm
-NICHE_SIZE = 8.0
+NICHE_SIZE = 0.0
 
 
 class GeneticOptimizer:
     def __init__(
-        self,
-        game_runner,
-        enemy,
-        generations=GENERATIONS,
-        layer_nodes=LAYER_NODES,
-        cx_probability=CX_PROBABILITY,
-        cx_alpha=CX_ALPHA,
-        tournsize=TOURNSIZE,
-        mut_probability=MUT_PROBABILITY,
-        population_size=POPULATION_SIZE,
-        lambda_offspring=LAMBDA,
-        mut_mu=MUT_MU,
-        mut_step_size=MUT_STEP_SIZE,
-        mut_indpb=MUT_INDPB,
-        niche_size=NICHE_SIZE,
-        run_number=N_RUN,
-        checkpoint="checkpoint",
-        parallel=False,
+            self,
+            game_runner,
+            enemy,
+            generations=GENERATIONS,
+            layer_nodes=LAYER_NODES,
+            cx_probability=CX_PROBABILITY,
+            cx_alpha=CX_ALPHA,
+            tournsize=TOURNSIZE,
+            mut_probability=MUT_PROBABILITY,
+            population_size=POPULATION_SIZE,
+            lambda_offspring=LAMBDA,
+            mut_mu=MUT_MU,
+            mut_step_size=MUT_STEP_SIZE,
+            mut_indpb=MUT_INDPB,
+            niche_size=NICHE_SIZE,
+            run_number=N_RUN,
+            checkpoint="checkpoint",
+            parallel=False,
     ):
-        
+
         self.layer_nodes = layer_nodes
         self.checkpoint = checkpoint
         self.enemy = enemy
@@ -114,20 +114,19 @@ class GeneticOptimizer:
             population.append(individual)
         return population
 
-
     def intermediate_crossover(self, parent1, parent2):
         child1 = {
-                "weights_and_biases": np.zeros(len(parent1['weights_and_biases'])),
-                "mut_step_size": parent1['mut_step_size'],
-                "fitness": None,
-                "individual_gain": None,
-            }
+            "weights_and_biases": np.zeros(len(parent1['weights_and_biases'])),
+            "mut_step_size": parent1['mut_step_size'],
+            "fitness": None,
+            "individual_gain": None,
+        }
         child2 = {
-                "weights_and_biases": np.zeros(len(parent2['weights_and_biases'])),
-                "mut_step_size": parent1['mut_step_size'],
-                "fitness": None,
-                "individual_gain": None,
-            }
+            "weights_and_biases": np.zeros(len(parent2['weights_and_biases'])),
+            "mut_step_size": parent1['mut_step_size'],
+            "fitness": None,
+            "individual_gain": None,
+        }
 
         for i, (xi, yi) in enumerate(zip(parent1['weights_and_biases'], parent2['weights_and_biases'])):
             w = np.random.rand(1)[0]
@@ -138,11 +137,11 @@ class GeneticOptimizer:
             else:
                 child2['weights_and_biases'][i] = xi + w * (yi - xi)
                 child1['weights_and_biases'][i] = yi
-   
+
         return child1, child2
 
     def blend_crossover(self, individual1, individual2, alpha):
-   
+
         # For each weight/bias in the array, we decide a random shift quantity
         assert len(individual1["weights_and_biases"]) == len(
             individual2["weights_and_biases"]
@@ -150,23 +149,23 @@ class GeneticOptimizer:
         for i in range(len(individual1["weights_and_biases"])):
             crossover = (1 - 2 * alpha) * random.random() - alpha
             individual1["weights_and_biases"][i] = (
-                crossover * individual1["weights_and_biases"][i]
-                + (1 - crossover) * individual2["weights_and_biases"][i]
+                    crossover * individual1["weights_and_biases"][i]
+                    + (1 - crossover) * individual2["weights_and_biases"][i]
             )
             # Then, we invert the two "crossover weights" for the second individual
             individual2["weights_and_biases"][i] = (
-                crossover * individual2["weights_and_biases"][i]
-                + (1 - crossover) * individual1["weights_and_biases"][i]
+                    crossover * individual2["weights_and_biases"][i]
+                    + (1 - crossover) * individual1["weights_and_biases"][i]
             )
         # We can then mutate the sigmas too!
         crossover = (1 - 2 * alpha) * random.random() - alpha
         individual1["mut_step_size"] = (
-            crossover * individual1["mut_step_size"]
-            + (1 - crossover) * individual2["mut_step_size"]
+                crossover * individual1["mut_step_size"]
+                + (1 - crossover) * individual2["mut_step_size"]
         )
         individual2["mut_step_size"] = (
-            crossover * individual2["mut_step_size"]
-            + (1 - crossover) * individual1["mut_step_size"]
+                crossover * individual2["mut_step_size"]
+                + (1 - crossover) * individual1["mut_step_size"]
         )
         return individual1, individual2
 
@@ -180,7 +179,7 @@ class GeneticOptimizer:
         for i in range(len(individual["weights_and_biases"])):
             if random.random() < self.mut_indpb:
                 individual["weights_and_biases"][i] += (
-                    random.gauss(0, 1) * individual["mut_step_size"]
+                        random.gauss(0, 1) * individual["mut_step_size"]
                 )
         return individual
 
@@ -203,6 +202,8 @@ class GeneticOptimizer:
             :param population: The population to select from. (list)
             :param k: The number of individuals to select. (int)
         """
+
+        print(population[0])
         return sorted(population, key=lambda x: x["fitness"])[-k:]
 
     def verify_checkpoint(self):
@@ -287,7 +288,7 @@ class GeneticOptimizer:
         return fitness / sum([self.sharing(d, niche_size, alpha) for d in distances])
 
     def uncorrelated_mutation_one_step_size(
-        self, mut_step_size, mu, learning_rate, epsilon
+            self, mut_step_size, mu, learning_rate, epsilon
     ):
         """
         Update of the mutation step size. It must be computed before of performing the mutation on the individual.
@@ -310,10 +311,17 @@ class GeneticOptimizer:
         and saves the fitness to each Individual object (individual.fitness.values)
         :param population: The population of individuals to evaluate. (list)
         """
+
+        # fitnesses = ( (mean_fitnesses, [f1,f2,...]), (mean_player_life, [PE1,PE2,...], ... )
         fitnesses = map(self.game_runner.evaluate, population)
         for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
-            ind["fitness"] = fit
-            ind["individual_gain"] = player_life - enemy_life
+            ind["fitness"] = fit[0]  # fit = (mean_fitness , [f1,f2,...]) -> fit[0] = mean_fitness
+            ind["fitnesses"] = fit[
+                1]  # fit = (mean_fitness , [f1,f2,...]) -> fit[1] = [f1,f2,...] -> f1 = fitness of individual against enemy 1
+            ind["fitness_std"] = fit[
+                2]  # fit = (mean_fitness , [f1,f2,...]) -> fit[1] = [f1,f2,...] -> f1 = fitness of individual against enemy 1
+            ind["individual_gain"] = player_life[0] - enemy_life[0]
+            ind["individual_gains"] = list(zip(player_life[1] - enemy_life[1]))
 
     def compute_fitness_sharing_for_individuals(self, population):
         """
@@ -342,7 +350,10 @@ class GeneticOptimizer:
             "weights_and_biases": individual["weights_and_biases"].copy(),
             "mut_step_size": individual["mut_step_size"],
             "fitness": individual["fitness"],
+            "fitnesses": individual["fitnesses"],
+            "fitness_std": individual["fitness_std"],
             "individual_gain": individual["individual_gain"],
+            "individual_gains": individual["individual_gains"],
         }
 
     def evaluate_stats(self, population):
@@ -379,6 +390,8 @@ class GeneticOptimizer:
                 generation["best_individual"]["mut_step_size"],
                 generation["avg_mut_step_size"],
                 generation["std_mut_step_size"],
+                generation["best_individual"]["fitnesses"],
+                "a={}".format(generation["best_individual"]["individual_gains"]),
             ]
             for i, generation in self.logbook.items()
         ]
@@ -395,6 +408,8 @@ class GeneticOptimizer:
                     "mut_step_size best",
                     "mut_step_size avg",
                     "mut_step_size std",
+                    "best individual fitnesses",
+                    "best individual gains"
                 ],
                 tablefmt="orgtbl",
             )
@@ -408,7 +423,7 @@ class GeneticOptimizer:
         best_gain_along_generations = np.array(
             [
                 self.logbook[i]["best_individual"]["individual_gain"]
-                for i in range(self.start_gen+self.generations)
+                for i in range(self.start_gen + self.generations)
             ]
         )
 
@@ -427,6 +442,111 @@ class GeneticOptimizer:
             ]
         ]["best_individual"]
 
+    def dominates(self, individual1, individual2):
+        ind1_fitnesses = individual1['fitnesses']
+        ind2_fitnesses = individual2['fitnesses']
+
+        # 'fitness' is added to the objectives functions because  it is calculates as (fitness.mean - fitness.std)
+        # So its maximization minimizes de STD
+        ind1_fitnesses = np.append(ind1_fitnesses, individual1['fitness_std'])
+        ind2_fitnesses = np.append(ind2_fitnesses, individual2['fitness_std'])
+
+        out = False
+
+        for ind1, ind2 in zip(ind1_fitnesses, ind2_fitnesses):
+            if ind1 >= ind2:
+                out = True
+            else:
+                return False
+        return out
+
+    def fast_nondominated_sort(self, pop):
+        n = {str(a): 0 for a in pop}
+        S = {str(a): [] for a in pop}
+        F = [[]]
+        for p in pop:
+            for q in pop:
+                if self.dominates(p, q):
+                    S[str(p)].append(q)
+                elif self.dominates(q, p):
+                    n[str(p)] += 1
+            if n[str(p)] == 0:
+                F[0].append(p)
+
+        i = 0
+        while True:
+            H = []
+            for p in F[i]:
+                for q in S[str(p)]:
+                    n[str(q)] -= 1
+                    if n[str(q)] == 0:
+                        H.append(q)
+            i += 1
+            F.append([])
+            F[i] = H
+
+            if F[-1] == []:
+                break
+        return F[:-1]
+
+    def crowding_distance_assignment(self, f):
+        distances = {str(a): 0 for a in f}
+
+        for i in range(len(f[0]['fitnesses'])):
+            f = sorted(f, key=lambda x: x['fitnesses'][i], reverse=True)
+            distances[str(f[0])] = 10e9
+            distances[str(f[-1])] = 10e9
+            if len(f) >= 3:
+                for z in range(1, len(f) - 1):
+                    distances[str(f[z])] += (f[z + 1]['fitnesses'][i]) - (f[z - 1]['fitnesses'][i])
+        f2 = []
+        for o in f:
+            d = distances[str(o)]
+            o['dist'] = d
+            f2.append(o)
+        return f2
+
+    def compare(self, i, j):
+        if (i['rank'] < j['rank']) or ((i['rank'] == j['rank']) and i['dist'] > j['dist']):
+            return 1
+        else:
+            return -1
+
+    # Non-Domintated sorting GA: Implementation of NSGAII algorithm that uses non dominated pareto fronts and crowding to select the survivors
+    def NSGA2_survivor_selection(self, pop):
+        print(
+            "\n#############################################################################################################################################################################################")
+        print(
+            "#############  NSGA2_survivor_selection  #################################################################################################################################$$###################\n")
+        print("\n-POPULATION: ")
+        for indiv in pop: print("fitness={}\tfitnesses={}\tind_gain={}".format(indiv['fitness'], indiv['fitnesses'],
+                                                                               indiv['individual_gain']))
+        out = []
+
+        # calculate the sorted set F of non-dominated fronts
+        F = self.fast_nondominated_sort(pop)
+
+        while len(out) < self.population_size:
+            rank = 0
+            for f in F:
+                v = self.crowding_distance_assignment(f)
+                d = []
+
+                for item in v:
+                    p = item
+                    p['rank'] = rank
+                    d.append(p)
+
+                out.extend(d)
+
+                rank += 1
+
+        out = sorted(out, key=cmp_to_key(self.compare), reverse=True)
+
+        if len(out) > self.population_size:
+            out = out[0:self.population_size]
+        return out
+
     def evolve(self):
         """
         Runs the GA for a given number of generations.
@@ -440,18 +560,18 @@ class GeneticOptimizer:
 
         # start the evolution across the generations
         for g in tqdm(
-            range(self.start_gen+1, self.start_gen+self.generations),
-            desc=f"Run with nodes: {self.layer_nodes}",
-            leave=False,
+                range(self.start_gen + 1, self.start_gen + self.generations),
+                desc=f"Run with nodes: {self.layer_nodes}",
+                leave=False,
         ):
             if not self.parallel:
                 print(
-                    f"\n👨‍👩‍👧 Generation {g-1} is about to give birth to children! 👨‍👩‍👧"
+                    f"\n👨‍👩‍👧 Generation {g - 1} is about to give birth to children! 👨‍👩‍👧"
                 )
 
             # if the fitness sharing is enabled, you have to compute it for the new population
-            if self.niche_size > 0:
-                self.compute_fitness_sharing_for_individuals(self.population)
+            # if self.niche_size > 0:
+            #     self.compute_fitness_sharing_for_individuals(self.population)
 
             # create a new offspring of size LAMBDA*len(population)
             offspring_size = self.lambda_offspring * len(self.population)
@@ -509,29 +629,24 @@ class GeneticOptimizer:
 
             start_time = time.time()
 
-            if self.niche_size > 0:
-                # Evaluate the fitness for the whole offspring
-                self.evaluate_fitness_for_individuals(offspring)
-            else:
-                # If the fitness sharing is disabled, is not needed to recalculate the fitness each individual
+            invalid_ind = [ind for ind in offspring if ind["fitness"] is None]
 
-                # Evaluate the individuals with an invalid fitness
-                invalid_ind = [ind for ind in offspring if ind["fitness"] is None]
+            # Then evaluate the fitness of individuals with an invalid fitness
+            self.evaluate_fitness_for_individuals(invalid_ind)
 
-                # Then evaluate the fitness of individuals with an invalid fitness
-                self.evaluate_fitness_for_individuals(invalid_ind)
+            # Select the survivors for next generation of individuals only between the new generation <- parents already appended to offspring, so its not only from "new generatio "
+            # (non-dominated sorting pareto front / crowding survivor selection )
+            self.population = self.NSGA2_survivor_selection(offspring)
 
-            if not self.parallel:
-                print(
-                    f"Time to evaluate the fitness in the offspring: {round(time.time() - start_time, 3)} seconds"
-                )
-
-            # Select the survivors for next generation of individuals only between the new generation
-            # (age-based selection)
-            offspring = self.best_selection(offspring, len(self.population))
-
-            # The population is entirely replaced by the offspring
-            self.population = offspring
+            print(
+                "\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            print("POPULATION AT END OF GENERATION=")
+            for indiv in self.population: print(
+                "fitness={}\tfitnesses={}\tindiv_gain={}\trank={}\tdistance={}".format(indiv['fitness'],
+                                                                                       indiv['fitnesses'],
+                                                                                       indiv['individual_gain'],
+                                                                                       indiv['rank'],
+                                                                                       indiv['dist']))
 
             # We save every SAVING_FREQUENCY generations.
             if g % SAVING_FREQUENCY == 0 and not self.parallel:

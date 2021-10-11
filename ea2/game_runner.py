@@ -15,8 +15,8 @@ from pathlib import Path
 
 def my_cons_multi(values):
     values_mean =  values.mean() - values.std()
-
-    return (values_mean,values)
+    std = values.std() * -1
+    return ( values_mean , values,std)
 
 class GameRunner:
     def __init__(
