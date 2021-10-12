@@ -13,7 +13,7 @@ import pandas as pd
 N_RUN = 11
 ENEMY = [1, 5, 7, 8]
 RUNS_DIR = "runs"
-N_ISLANDS = 5
+N_ISLANDS = 5  # Note that with 1 island, this is disabled
 MIGRATION_INTERVAL = 4  # Please let this be higher than 1
 MIGRATION_SIZE = 2
 
@@ -42,6 +42,7 @@ ALPHA_FITNESS_SHARING = 1.0
 # [K. Deb. Multi-objective Optimization using Evolutionary Algorithms. Wiley, Chichester, UK, 2001]
 # suggests that a default value for the niche size should be in the range 5–10
 # set it to 0.0 to disable the fitness sharing algorithm
+# If you are using the island model, DO NOT SET THIS over 0.
 NICHE_SIZE = 0.0
 
 
@@ -531,6 +532,8 @@ class GeneticOptimizer:
         We take the worst individuals, and migrate them to an attractive island (having high fitness avg. increase)
         We then take individuals from that island, and send them to the aforementioned one
         """
+        if len(self.population) < 2:  # If there is only one island, we don't migrate
+            return
         for island_i, island in enumerate(self.population):
             # get the worst individuals
             worst_individuals_indices = sorted(
