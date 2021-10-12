@@ -13,7 +13,9 @@ import pandas as pd
 N_RUN = 11
 ENEMY = [1, 5, 7, 8]
 RUNS_DIR = "runs"
-
+N_ISLANDS = 5  # Note that with 1 island, this is disabled
+MIGRATION_INTERVAL = 4  # Please let this be higher than 1
+MIGRATION_SIZE = 2
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
 # The last HAS TO BE the number of outputs. The middle HAS TO BE the number of nodes in the hidden layer.
@@ -28,7 +30,7 @@ MUT_PROBABILITY = 0.42
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 20
+POPULATION_SIZE = 5  # Individuals PER EACH ISLAND
 GENERATIONS = 20
 SAVING_FREQUENCY = 3
 TOURNSIZE = 5
@@ -40,7 +42,8 @@ ALPHA_FITNESS_SHARING = 1.0
 # [K. Deb. Multi-objective Optimization using Evolutionary Algorithms. Wiley, Chichester, UK, 2001]
 # suggests that a default value for the niche size should be in the range 5–10
 # set it to 0.0 to disable the fitness sharing algorithm
-NICHE_SIZE = 10.0
+# If you are using the island model, DO NOT SET THIS over 0.
+NICHE_SIZE = 0.0
 
 
 class GeneticOptimizer:
@@ -61,6 +64,10 @@ class GeneticOptimizer:
         mut_indpb=MUT_INDPB,
         niche_size=NICHE_SIZE,
         run_number=N_RUN,
+        migration_interval=MIGRATION_INTERVAL,
+        saving_frequency=SAVING_FREQUENCY,
+        n_islands=N_ISLANDS,
+        migration_size=MIGRATION_SIZE,
         checkpoint="checkpoint",
         parallel=False,
     ):
@@ -104,6 +111,10 @@ class GeneticOptimizer:
         self.cx_alpha = cx_alpha
         self.logbook = {}
         self.run_number = run_number
+        self.migration_interval = migration_interval
+        self.saving_frequency = saving_frequency
+        self.n_islands = n_islands
+        self.migration_size = migration_size
 
         weights_no = 0
         for i in range(0, len(self.layer_nodes) - 1):
@@ -114,6 +125,7 @@ class GeneticOptimizer:
         # it is usually inversely proportional to the square root of the problem size
         self.learning_rate = 1 / (self.individual_size ** 0.5)
         self.verify_checkpoint()
+        self.register_variation_operators()
 
     def getLogbook(self):
         return self.logbook
@@ -125,23 +137,51 @@ class GeneticOptimizer:
             :param n: The size of the population. (int)
             :param wandb_size: The size of the array containing weights and biases. (int)
         """
-        population = []
-        for i in range(n):
-            individual = {
-                "weights_and_biases": np.random.uniform(
-                    low=MIN_VALUE_INDIVIDUAL,
-                    high=MAX_VALUE_INDIVIDUAL,
-                    size=wandb_size,
-                ),
-                "mut_step_size": self.mut_step_size,
-                "fitness": None,
-                "individual_gain": None,
-            }
-            population.append(individual)
+        population = [[] for i in range(self.n_islands)]
+        for j, island in enumerate(population):
+            for i in range(n):
+                individual = {
+                    "weights_and_biases": np.random.uniform(
+                        low=MIN_VALUE_INDIVIDUAL,
+                        high=MAX_VALUE_INDIVIDUAL,
+                        size=wandb_size,
+                    ),
+                    "mut_step_size": self.mut_step_size,
+                    "fitness": None,
+                    "individual_gain": None,
+                }
+                population[j].append(individual)
         return population
 
+    def intermediate_crossover(self, parent1, parent2):
+        child1 = {
+            "weights_and_biases": np.zeros(len(parent1["weights_and_biases"])),
+            "mut_step_size": parent1["mut_step_size"],
+            "fitness": None,
+            "individual_gain": None,
+        }
+        child2 = {
+            "weights_and_biases": np.zeros(len(parent2["weights_and_biases"])),
+            "mut_step_size": parent1["mut_step_size"],
+            "fitness": None,
+            "individual_gain": None,
+        }
 
-    def blend_crossover(self, individual1, individual2, alpha):
+        for i, (xi, yi) in enumerate(
+            zip(parent1["weights_and_biases"], parent2["weights_and_biases"])
+        ):
+            w = np.random.rand(1)[0]
+
+            if xi < yi:
+                child1["weights_and_biases"][i] = xi + w * (yi - xi)
+                child2["weights_and_biases"][i] = yi
+            else:
+                child2["weights_and_biases"][i] = xi + w * (yi - xi)
+                child1["weights_and_biases"][i] = yi
+
+        return child1, child2
+
+    def blend_crossover(self, individual1, individual2):
         """
         Mates two individuals, randomly choosing a crossover point and performing a blend crossover as seen in book at page 67.
             :param individual1: The first parent. (np.array)
@@ -154,7 +194,7 @@ class GeneticOptimizer:
             individual2["weights_and_biases"]
         )
         for i in range(len(individual1["weights_and_biases"])):
-            crossover = (1 - 2 * alpha) * random.random() - alpha
+            crossover = (1 - 2 * self.cx_alpha) * random.random() - self.cx_alpha
             individual1["weights_and_biases"][i] = (
                 crossover * individual1["weights_and_biases"][i]
                 + (1 - crossover) * individual2["weights_and_biases"][i]
@@ -165,7 +205,7 @@ class GeneticOptimizer:
                 + (1 - crossover) * individual1["weights_and_biases"][i]
             )
         # We can then mutate the sigmas too!
-        crossover = (1 - 2 * alpha) * random.random() - alpha
+        crossover = (1 - 2 * self.cx_alpha) * random.random() - self.cx_alpha
         individual1["mut_step_size"] = (
             crossover * individual1["mut_step_size"]
             + (1 - crossover) * individual2["mut_step_size"]
@@ -313,6 +353,20 @@ class GeneticOptimizer:
         self.start_gen = 0
         self.logbook = {}
 
+    def register_variation_operators(self):
+        """
+        Register the variation operators to be used in the evolution.
+        """
+        self.mutation_operators = [self.mutate_individual]
+        self.crossover_operators = [self.blend_crossover, self.intermediate_crossover]
+        self.variation_operators = [
+            {
+                "mutation": random.choice(self.mutation_operators),
+                "crossover": random.choice(self.crossover_operators),
+            }
+            for i in range(self.n_islands)
+        ]
+
     def evaluate_fitness_for_individuals(self, population):
         """
         This loops over a given population of individuals,
@@ -323,12 +377,16 @@ class GeneticOptimizer:
         for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
             # compute regularization term l2
             weights_slice = LAYER_NODES[0] * LAYER_NODES[1] + LAYER_NODES[1]
-            weights = np.concatenate([
-                                        ind["weights_and_biases"][LAYER_NODES[1]:weights_slice]
-                                      , ind["weights_and_biases"][weights_slice + LAYER_NODES[2]:]
-                                      ])
+            weights = np.concatenate(
+                [
+                    ind["weights_and_biases"][LAYER_NODES[1] : weights_slice],
+                    ind["weights_and_biases"][weights_slice + LAYER_NODES[2] :],
+                ]
+            )
 
-            ind["fitness"] = fit - sum([w**2 for w in weights])*LAMBDA_REGULARIZATION
+            ind["fitness"] = (
+                fit - sum([w ** 2 for w in weights]) * LAMBDA_REGULARIZATION
+            )
             ind["individual_gain"] = player_life - enemy_life
 
     def compute_fitness_sharing_for_individuals(self, population):
@@ -366,17 +424,37 @@ class GeneticOptimizer:
         Compute the statistics of the population.
             :param population: The population of individuals to evaluate. (list)
         """
+
         return {
-            "avg_fitness": np.average([ind["fitness"] for ind in population]),
-            "min_fitness": np.min([ind["fitness"] for ind in population]),
-            "max_fitness": np.max([ind["fitness"] for ind in population]),
-            "std_fitness": np.std([ind["fitness"] for ind in population]),
-            "avg_mut_step_size": np.average(
-                [ind["mut_step_size"] for ind in population]
+            "avg_fitness": np.average(
+                [ind["fitness"] for island in population for ind in island]
             ),
-            "std_mut_step_size": np.std([ind["mut_step_size"] for ind in population]),
+            "min_fitness": np.min(
+                [ind["fitness"] for island in population for ind in island]
+            ),
+            "max_fitness": np.max(
+                [ind["fitness"] for island in population for ind in island]
+            ),
+            "std_fitness": np.std(
+                [ind["fitness"] for island in population for ind in island]
+            ),
+            "avg_mut_step_size": np.average(
+                [ind["mut_step_size"] for island in population for ind in island]
+            ),
+            "std_mut_step_size": np.std(
+                [ind["mut_step_size"] for island in population for ind in island]
+            ),
+            "islands_avg_fitness": np.array(
+                [
+                    np.average([ind["fitness"] for ind in island])
+                    for island in population
+                ]
+            ),
             "best_individual": self.clone_individual(
-                population[np.argmax([ind["individual_gain"] for ind in population])]
+                max(
+                    [ind for island in population for ind in island],
+                    key=lambda ind: ind["individual_gain"],
+                )
             ),
         }
 
@@ -424,7 +502,7 @@ class GeneticOptimizer:
         best_gain_along_generations = np.array(
             [
                 self.logbook[i]["best_individual"]["individual_gain"]
-                for i in range(self.start_gen+self.generations)
+                for i in range(self.start_gen + self.generations)
             ]
         )
 
@@ -443,20 +521,65 @@ class GeneticOptimizer:
             ]
         ]["best_individual"]
 
+    def migration(self, migration_size, generation):
+        """
+        Migrates some individuals (results show that it's better than just migrating the best)
+        from an island to the next one.
+        How do we select the individuals to migrate? We merge the approaches seen in:
+        - https://www.sciencedirect.com/science/article/pii/S0305054815002361
+        - https://link.springer.com/article/10.1007/s12065-019-00253-2 (DDMP)
+
+        We take the worst individuals, and migrate them to an attractive island (having high fitness avg. increase)
+        We then take individuals from that island, and send them to the aforementioned one
+        """
+        if len(self.population) < 2:  # If there is only one island, we don't migrate
+            return
+        for island_i, island in enumerate(self.population):
+            # get the worst individuals
+            worst_individuals_indices = sorted(
+                range(0, len(self.population[island_i])),
+                key=lambda i: self.population[island_i][i]["fitness"],
+                reverse=True,
+            )[:migration_size]
+            print(f"worst individual indices: {worst_individuals_indices}")
+            # We pick an interesting island, basing on the fitness average increase
+            avg_increases = (
+                self.logbook[generation - 1]["islands_avg_fitness"]
+                - self.logbook[generation - 2]["islands_avg_fitness"]
+            )
+
+            for individual_i in worst_individuals_indices:
+                interesting_island = random.choices(
+                    range(self.n_islands), weights=avg_increases, k=1
+                )[0]
+                # Pick a random individual in interesting_island to exchange this with
+                interesting_island_individual = random.randint(
+                    0, len(self.population[interesting_island]) - 1
+                )
+                # Exchange the individuals
+                (
+                    self.population[interesting_island][interesting_island_individual],
+                    self.population[island_i][individual_i],
+                ) = (
+                    self.population[island_i][individual_i],
+                    self.population[interesting_island][interesting_island_individual],
+                )
+
     def evolve(self):
         """
         Runs the GA for a given number of generations.
         """
 
         # First, evaluate the whole population's fitnesses
-        self.evaluate_fitness_for_individuals(self.population)
+        for i, island in enumerate(self.population):
+            self.evaluate_fitness_for_individuals(island)
 
         # store the initial statistics about population 0 in the logbook
         self.logbook[self.start_gen] = self.evaluate_stats(self.population)
 
         # start the evolution across the generations
         for g in tqdm(
-            range(self.start_gen+1, self.start_gen+self.generations),
+            range(self.start_gen + 1, self.start_gen + self.generations),
             desc=f"Run with nodes: {self.layer_nodes}",
             leave=False,
         ):
@@ -465,69 +588,85 @@ class GeneticOptimizer:
                     f"\n👨‍👩‍👧 Generation {g-1} is about to give birth to children! 👨‍👩‍👧"
                 )
 
-            # if the fitness sharing is enabled, you have to compute it for the new population
+            # if the fitness sharing is enabled, you have to compute it for every island's population
             if self.niche_size > 0:
-                self.compute_fitness_sharing_for_individuals(self.population)
-
+                for i, island in enumerate(self.population):
+                    self.compute_fitness_sharing_for_individuals(island)
+            if self.migration_size > 0 and g % self.migration_interval == 0:
+                self.migration(self.migration_size, g)
             # create a new offspring of size LAMBDA*len(population)
-            offspring_size = self.lambda_offspring * len(self.population)
-            offspring = []
-            for i in range(1, offspring_size, 2):
-
-                # selection of 2 parents with replacement
-                parents = self.tournament_selection(
-                    self.population, k=2, tournsize=self.tournsize
-                )
-
-                # clone the 2 parents in the new offspring
-                offspring.append(self.clone_individual(parents[0]))
-                offspring.append(self.clone_individual(parents[1]))
-
-                # apply mutation between the parents in a non-deterministic way
-                if random.random() < self.cx_probability:
-                    offspring[i - 1], offspring[i] = self.blend_crossover(
-                        offspring[i - 1], offspring[i], self.cx_alpha
-                    )
-                    offspring[i - 1]["fitness"] = None
-                    offspring[i]["fitness"] = None
-
-                # apply mutation to the 2 new children
-                if random.random() < self.mut_probability:
-                    # mutate the step size
-                    offspring[i - 1][
-                        "mut_step_size"
-                    ] = self.uncorrelated_mutation_one_step_size(
-                        offspring[i - 1]["mut_step_size"],
-                        mu=self.mut_mu,
-                        learning_rate=self.learning_rate,
-                        epsilon=EPSILON_UNCORRELATED_MUTATION,
-                    )
-                    offspring[i][
-                        "mut_step_size"
-                    ] = self.uncorrelated_mutation_one_step_size(
-                        offspring[i]["mut_step_size"],
-                        mu=self.mut_mu,
-                        learning_rate=self.learning_rate,
-                        epsilon=EPSILON_UNCORRELATED_MUTATION,
+            offspring_size = self.lambda_offspring * len(self.population[0])
+            offspring = [[] for i in range(self.n_islands)]
+            for island_i, island in enumerate(self.population):
+                for i in range(1, offspring_size, 2):
+                    # selection of 2 parents with replacement
+                    parents = self.tournament_selection(
+                        self.population[island_i], k=2, tournsize=self.tournsize
                     )
 
-                    # mutate the individuals
-                    offspring[i - 1] = self.mutate_individual(offspring[i - 1])
-                    offspring[i - 1]["fitness"] = None
+                    # clone the 2 parents in the new offspring
+                    offspring[island_i].append(self.clone_individual(parents[0]))
+                    offspring[island_i].append(self.clone_individual(parents[1]))
 
-                    offspring[i] = self.mutate_individual(offspring[i])
-                    offspring[i]["fitness"] = None
+                    # apply mutation between the parents in a non-deterministic way
+                    if random.random() < self.cx_probability:
+                        (
+                            offspring[island_i][i - 1],
+                            offspring[island_i][i],
+                        ) = self.variation_operators[island_i]["crossover"](
+                            offspring[island_i][i - 1],
+                            offspring[island_i][i],
+                        )
+                        offspring[island_i][i - 1]["fitness"] = None
+                        offspring[island_i][i]["fitness"] = None
+
+                    # apply mutation to the 2 new children
+                    if random.random() < self.mut_probability:
+                        # mutate the step size
+                        offspring[island_i][i - 1][
+                            "mut_step_size"
+                        ] = self.uncorrelated_mutation_one_step_size(
+                            offspring[island_i][i - 1]["mut_step_size"],
+                            mu=self.mut_mu,
+                            learning_rate=self.learning_rate,
+                            epsilon=EPSILON_UNCORRELATED_MUTATION,
+                        )
+                        offspring[island_i][i][
+                            "mut_step_size"
+                        ] = self.uncorrelated_mutation_one_step_size(
+                            offspring[island_i][i]["mut_step_size"],
+                            mu=self.mut_mu,
+                            learning_rate=self.learning_rate,
+                            epsilon=EPSILON_UNCORRELATED_MUTATION,
+                        )
+
+                        # mutate the individuals
+                        offspring[island_i][i - 1] = self.variation_operators[island_i][
+                            "mutation"
+                        ](offspring[island_i][i - 1])
+                        offspring[island_i][i - 1]["fitness"] = None
+
+                        offspring[island_i][i] = self.variation_operators[island_i][
+                            "mutation"
+                        ](offspring[island_i][i])
+                        offspring[island_i][i]["fitness"] = None
 
             start_time = time.time()
 
             if self.niche_size > 0:
                 # Evaluate the fitness for the whole offspring
-                self.evaluate_fitness_for_individuals(offspring)
+                for i, island in enumerate(offspring):
+                    self.evaluate_fitness_for_individuals(island)
             else:
                 # If the fitness sharing is disabled, is not needed to recalculate the fitness each individual
 
                 # Evaluate the individuals with an invalid fitness
-                invalid_ind = [ind for ind in offspring if ind["fitness"] is None]
+                invalid_ind = [
+                    ind
+                    for island_offspring in offspring
+                    for ind in island_offspring
+                    if ind["fitness"] is None
+                ]
 
                 # Then evaluate the fitness of individuals with an invalid fitness
                 self.evaluate_fitness_for_individuals(invalid_ind)
@@ -539,7 +678,10 @@ class GeneticOptimizer:
 
             # Select the survivors for next generation of individuals only between the new generation
             # (age-based selection)
-            offspring = self.best_selection(offspring, len(self.population))
+            for island_i, island in enumerate(self.population):
+                offspring[island_i] = self.best_selection(
+                    offspring[island_i], len(self.population[island_i])
+                )
 
             # The population is entirely replaced by the offspring
             self.population = offspring
