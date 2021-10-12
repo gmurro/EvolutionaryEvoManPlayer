@@ -20,12 +20,12 @@ LAYER_NODES = [20, 20, 24, 5]
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.75
 CX_ALPHA = 0.45
-MUT_PROBABILITY = 0.62
+MUT_PROBABILITY = 0.8
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 20
-GENERATIONS = 5
+POPULATION_SIZE = 50
+GENERATIONS = 30
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
 LAMBDA = 5  # literature advise to use LAMBDA=5-7 ORIGINAL !
@@ -314,14 +314,12 @@ class GeneticOptimizer:
 
         # fitnesses = ( (mean_fitnesses, [f1,f2,...]), (mean_player_life, [PE1,PE2,...], ... )
         fitnesses = map(self.game_runner.evaluate, population)
-        for ind, (fit, player_life, enemy_life, time) in zip(population, fitnesses):
-            ind["fitness"] = fit[0]  # fit = (mean_fitness , [f1,f2,...]) -> fit[0] = mean_fitness
-            ind["fitnesses"] = fit[
-                1]  # fit = (mean_fitness , [f1,f2,...]) -> fit[1] = [f1,f2,...] -> f1 = fitness of individual against enemy 1
-            ind["fitness_std"] = fit[
-                2]  # fit = (mean_fitness , [f1,f2,...]) -> fit[1] = [f1,f2,...] -> f1 = fitness of individual against enemy 1
-            ind["individual_gain"] = player_life[0] - enemy_life[0]
-            ind["individual_gains"] = list(zip(player_life[1] - enemy_life[1]))
+        for ind, (fit, player_life, enemy_life, time, individual_gains) in zip(population, fitnesses):
+            ind["fitness"] = fit[0]  # fit = (mean_fitness , [f1,f2,...],std) -> fit[0] = mean_fitness
+            ind["fitnesses"] = fit[1]  # fit[1] = [f1,f2,...] -> f1 = fitness of individual against enemy 1
+            ind["fitness_std"] = fit[2]  # fit[2] = std
+            ind["individual_gain"] = player_life - enemy_life
+            ind["individual_gains"] = individual_gains
 
     def compute_fitness_sharing_for_individuals(self, population):
         """
@@ -364,8 +362,8 @@ class GeneticOptimizer:
         return {
             "avg_fitness": np.average([ind["fitness"] for ind in population]),
             "min_fitness": np.min([ind["fitness"] for ind in population]),
-            "max_fitness": np.max([ind["fitness"] for ind in population]),
-            "std_fitness": np.std([ind["fitness"] for ind in population]),
+            "max_fitness": np.max([ind["fitness"] for ind in population]), # max ( f.mean - f.std )
+            "std_fitness": np.std([ind["fitness"] for ind in population]), # std ( f.mean - f.std )
             "avg_mut_step_size": np.average(
                 [ind["mut_step_size"] for ind in population]
             ),
@@ -385,7 +383,6 @@ class GeneticOptimizer:
                 generation["avg_fitness"],
                 generation["max_fitness"],
                 generation["std_fitness"],
-                generation["best_individual"]["fitness"],
                 generation["best_individual"]["individual_gain"],
                 generation["best_individual"]["mut_step_size"],
                 generation["avg_mut_step_size"],
@@ -401,10 +398,9 @@ class GeneticOptimizer:
                 headers=[
                     "Generation",
                     "Fitness avg",
-                    "Fitness max",
+                    "Fitness max: with f=(mean-std) f/a/enems",
                     "Fitness std",
-                    "Fitness best",
-                    "Gain best",
+                    "Best Indiv Gain: (sum(pe)-sum(ee))",
                     "mut_step_size best",
                     "mut_step_size avg",
                     "mut_step_size std",
@@ -448,8 +444,8 @@ class GeneticOptimizer:
 
         # 'fitness' is added to the objectives functions because  it is calculates as (fitness.mean - fitness.std)
         # So its maximization minimizes de STD
-        ind1_fitnesses = np.append(ind1_fitnesses, individual1['fitness_std'])
-        ind2_fitnesses = np.append(ind2_fitnesses, individual2['fitness_std'])
+        # ind1_fitnesses = np.append(ind1_fitnesses, individual1['fitness_std'])
+        # ind2_fitnesses = np.append(ind2_fitnesses, individual2['fitness_std'])
 
         out = False
 
@@ -514,11 +510,6 @@ class GeneticOptimizer:
 
     # Non-Domintated sorting GA: Implementation of NSGAII algorithm that uses non dominated pareto fronts and crowding to select the survivors
     def NSGA2_survivor_selection(self, pop):
-        print(
-            "\n#############################################################################################################################################################################################")
-        print(
-            "#############  NSGA2_survivor_selection  #################################################################################################################################$$###################\n")
-        print("\n-POPULATION: ")
         for indiv in pop: print("fitness={}\tfitnesses={}\tind_gain={}".format(indiv['fitness'], indiv['fitnesses'],
                                                                                indiv['individual_gain']))
         out = []
@@ -545,6 +536,7 @@ class GeneticOptimizer:
 
         if len(out) > self.population_size:
             out = out[0:self.population_size]
+        print("population size: {}".format(len(out)))
         return out
 
     def evolve(self):
@@ -589,13 +581,13 @@ class GeneticOptimizer:
 
                 # apply mutation between the parents in a non-deterministic way
                 if random.random() < self.cx_probability:
-                    # offspring[i - 1], offspring[i] = self.blend_crossover(
-                    #     offspring[i - 1], offspring[i], self.cx_alpha
-                    # )
-
-                    offspring[i - 1], offspring[i] = self.intermediate_crossover(
-                        offspring[i - 1], offspring[i]
+                    offspring[i - 1], offspring[i] = self.blend_crossover(
+                        offspring[i - 1], offspring[i], self.cx_alpha
                     )
+
+                    # offspring[i - 1], offspring[i] = self.intermediate_crossover(
+                    #     offspring[i - 1], offspring[i]
+                    # )
 
                     offspring[i - 1]["fitness"] = None
                     offspring[i]["fitness"] = None
