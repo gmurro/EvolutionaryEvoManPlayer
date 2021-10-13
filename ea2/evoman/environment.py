@@ -594,7 +594,7 @@ class Environment(object):
         venemylife = self.cons_multi(numpy.array(venemylife))
         vtime = self.cons_multi(numpy.array(vtime))
 
-        return    vfitness, vplayerlife, venemylife, vtime
+        return vfitness, vplayerlife, venemylife, vtime
 
 
     # checks objective mode

@@ -32,7 +32,7 @@ env = Environment(experiment_name=experiment_name,
                   level=2,
                   randomini='yes')
 
-sol = np.loadtxt('runs/enemy_[1, 5, 7, 8]/best_individual_run_11.txt')
+sol = np.loadtxt('runs/enemy_[2, 5, 8]/best_individual_run_11.txt')
 print('\n LOADING SAVED GENERALIST SOLUTION FOR ALL ENEMIES \n')
 
 # tests saved demo solutions for each enemy

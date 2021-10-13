@@ -11,9 +11,9 @@ from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = [1, 5, 7, 8]
+ENEMY = [2,  5, 6]
 RUNS_DIR = "runs"
-N_ISLANDS = 5  # Note that with 1 island, this is disabled
+N_ISLANDS = 2  # Note that with 1 island, this is disabled
 MIGRATION_INTERVAL = 4  # Please let this be higher than 1
 MIGRATION_SIZE = 2
 
@@ -30,10 +30,10 @@ MUT_PROBABILITY = 0.42
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 5  # Individuals PER EACH ISLAND
+POPULATION_SIZE = 10  # Individuals PER EACH ISLAND
 GENERATIONS = 20
 SAVING_FREQUENCY = 3
-TOURNSIZE = 5
+TOURNSIZE = 7
 LAMBDA = 5  # literature advise to use LAMBDA=5-7
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
@@ -541,7 +541,7 @@ class GeneticOptimizer:
                 key=lambda i: self.population[island_i][i]["fitness"],
                 reverse=True,
             )[:migration_size]
-            print(f"worst individual indices: {worst_individuals_indices}")
+
             # We pick an interesting island, basing on the fitness average increase
             avg_increases = (
                 self.logbook[generation - 1]["islands_avg_fitness"]
