@@ -2,10 +2,10 @@ from multiprocessing import Pool
 # from genetic_optimization import run_optimization
 from genetic_optimization import run_optimization
 
-START_RUN = 1
-END_RUN = 1
+START_RUN =1
+END_RUN = 10
 # ENEMY = [1,2,5]
-ENEMY = [2,5,8]
+ENEMY = [1,5,6]
 
 
 def run_experiment(run_number):
@@ -17,5 +17,5 @@ def run_experiment(run_number):
 
 
 if __name__ == "__main__":
-    with Pool(10) as p:
+    with Pool(5) as p:
         p.map(run_experiment, range(START_RUN, END_RUN + 1))
