@@ -8,12 +8,23 @@ from ast import literal_eval
 
 import scipy.stats as stats
 
-ENEMY = 5
-EA_DIRS = ["approach1", "approach2"]
+# group of enemies trained on
+ENEMIES_TRAINING = [2, 5, 8]
+
+EA_DIRS = ["ea1", "ea2"]
 RUNS_DIR = "runs"
 FILE_NAME = "games_played.csv"
 PLOTS_DIR = "plots"
 PLOT_RESULT_NAME = "box_plot_enemy_"
+
+def enemies_dir_name(enemies):
+    """
+    Converts a list of enemies into a string
+    """
+    dir_name = ""
+    for enemy in enemies:
+        dir_name += str(enemy) + "_"
+    return dir_name[:-1]
 
 
 def statistics_across_generations(data):
@@ -29,8 +40,8 @@ def statistics_across_generations(data):
 
 def main():
     # read the csv file containing the results of played games
-    ea1_file_path = os.path.join(EA_DIRS[0], RUNS_DIR, "enemy_" + str(ENEMY), FILE_NAME)
-    ea2_file_path = os.path.join(EA_DIRS[1], RUNS_DIR, "enemy_" + str(ENEMY), FILE_NAME)
+    ea1_file_path = os.path.join(EA_DIRS[0], RUNS_DIR, "enemy_" + enemies_dir_name(ENEMIES_TRAINING), FILE_NAME)
+    ea2_file_path = os.path.join(EA_DIRS[1], RUNS_DIR, "enemy_" + enemies_dir_name(ENEMIES_TRAINING), FILE_NAME)
 
     ea1_df_games = pd.read_csv(ea1_file_path, sep=";")
     ea2_df_games = pd.read_csv(ea2_file_path, sep=";")
@@ -54,11 +65,11 @@ def main():
     palette = {"Approach1": "blue", "Approach2": "red"}
     ax = sns.boxplot(data = df, palette=palette)
     ax.set(ylabel='Individual gain'
-           , title=f'Enemy {ENEMY} (T-statistic = {t_statistic.statistic:.2f}, p-value = {t_statistic.pvalue:.2f})')
+           , title=f'Enemies {ENEMIES_TRAINING} (T-statistic = {t_statistic.statistic:.2f}, p-value = {t_statistic.pvalue:.2f})')
     plt.show()
 
     # save plot
-    plot_file_name = os.path.join(PLOTS_DIR, PLOT_RESULT_NAME + str(ENEMY))
+    plot_file_name = os.path.join(PLOTS_DIR, PLOT_RESULT_NAME + enemies_dir_name(ENEMIES_TRAINING))
     os.makedirs(PLOTS_DIR, exist_ok=True)
     ax.get_figure().savefig(plot_file_name, bbox_inches='tight')
     print(f"Plot saved in {plot_file_name}")

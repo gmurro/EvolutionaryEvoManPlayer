@@ -33,7 +33,7 @@ def write_header(file_path):
     Write the header for the csv file
     """
     os.makedirs(TUNING_DIR, exist_ok=True)
-    fields = ['pop_size', 'cx_prob', 'cx_alpha', 'mut_prob', 'mut_indpb', 'tournsize', 'migration_size', 'fitness_best',
+    fields = ['pop_size', 'cx_prob', 'cx_alpha', 'mut_prob', 'mut_indpb', 'tournsize', 'migration_interval', 'migration_size', 'fitness_best',
               'gain_best']
     with open(file_path, 'w') as file:
         writer = csv.writer(file)
@@ -94,7 +94,7 @@ space = hp.choice(
             "mut_probability": hp.uniform("mut_probability", 0, 0.6),
             "migration_interval": hp.quniform("migration_interval", 2, 10, 1),
             "migration_size": hp.quniform("migration_size", 2, 10, 1),
-            "tournsize": hp.quniform("tournsize", 5, 10, 1),
+            "tournsize": hp.quniform("tournsize", 5, 9, 1),
             "mutation_indpb": hp.uniform("mutation_indpb", 0, 1),
         },
     ],

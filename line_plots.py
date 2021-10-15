@@ -8,17 +8,29 @@ from matplotlib import scale as mscale
 from matplotlib import transforms as mtransforms
 from matplotlib.ticker import FixedLocator, FuncFormatter
 
-ENEMY = 8
+# group of enemies trained on
+ENEMIES_TRAINING = [2, 5, 8]
+
+GENERATIONS = 3
 SPACE_LIM = 5
 ARANGE_SPACE = 10.0
-EA_DIR = "approach2"
-APPROACH_NAME = "Approach 2"
+EA_DIR = "ea1"
+APPROACH_NAME = "EA 1"
 COLOR_MEAN="red"
 COLOR_MAX="blue"
 RUNS_DIR = "runs"
 LOGBOOK_PATTERN = "logbook_run_"
 PLOTS_DIR = "plots"
 PLOT_RESULT_NAME = "line_plot_enemy_"
+
+def enemies_dir_name(enemies):
+    """
+    Converts a list of enemies into a string
+    """
+    dir_name = ""
+    for enemy in enemies:
+        dir_name += str(enemy) + "_"
+    return dir_name[:-1]
 
 
 def read_files(dir_path):
@@ -62,7 +74,7 @@ def line_plot(ea_stats):
     ax.fill_between(x, max_fitness_lower_bound, max_fitness_upper_bound, facecolor=COLOR_MAX, alpha=0.3,)
 
     min_y_lim = min([
-                        min(ea_stats['mean_avg_fitness'][1:])
+                        min(ea_stats['mean_avg_fitness'])
                    ]) - SPACE_LIM
     max_y_lim = max([
                         max(ea_stats['mean_max_fitness'])
@@ -70,11 +82,11 @@ def line_plot(ea_stats):
 
     ax.set_ylim(min_y_lim, max_y_lim)
     ax.legend(loc='best')
-    ax.set_title(f'Enemy {ENEMY} - {APPROACH_NAME}')
+    ax.set_title(f'Enemies {ENEMIES_TRAINING} - {APPROACH_NAME}')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xlabel('generations')
     ax.set_ylabel('fitness')
-    ax.set_xticks(np.arange(0, 25, 2.0))
+    ax.set_xticks(np.arange(0, GENERATIONS, 2.0))
     ax.set_yticks(np.arange(np.floor(min_y_lim), np.ceil(max_y_lim), ARANGE_SPACE))
     ax.grid(linestyle="--")
     plt.show()
@@ -82,7 +94,7 @@ def line_plot(ea_stats):
 
 
 if __name__ == "__main__":
-    dir_path = os.path.join(EA_DIR, RUNS_DIR, "enemy_"+str(ENEMY))
+    dir_path = os.path.join(EA_DIR, RUNS_DIR, "enemy_"+enemies_dir_name(ENEMIES_TRAINING))
 
     # read csv files as DataFrame
     ea_df = read_files(dir_path)
@@ -94,7 +106,7 @@ if __name__ == "__main__":
     fig = line_plot(ea_stats)
 
     # save plot
-    plot_file_name = os.path.join(PLOTS_DIR, PLOT_RESULT_NAME+str(ENEMY)+"_"+EA_DIR)
+    plot_file_name = os.path.join(PLOTS_DIR, PLOT_RESULT_NAME+enemies_dir_name(ENEMIES_TRAINING)+"_"+EA_DIR)
     os.makedirs(PLOTS_DIR, exist_ok=True)
     fig.savefig(plot_file_name, bbox_inches='tight')
     print(f"Plot saved in {plot_file_name}")
