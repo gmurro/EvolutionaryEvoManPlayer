@@ -11,11 +11,11 @@ from tabulate import tabulate
 import pandas as pd
 
 N_RUN = 11
-ENEMY = [2,  5, 6]
+ENEMY = [1, 5, 6]
 RUNS_DIR = "runs"
-N_ISLANDS = 2  # Note that with 1 island, this is disabled
+N_ISLANDS = 10  # Note that with 1 island, this is disabled
 MIGRATION_INTERVAL = 4  # Please let this be higher than 1
-MIGRATION_SIZE = 2
+MIGRATION_SIZE = 6
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
 # The last HAS TO BE the number of outputs. The middle HAS TO BE the number of nodes in the hidden layer.
@@ -24,14 +24,14 @@ LAYER_NODES = [20, 10, 5]
 LAMBDA_REGULARIZATION = 0.01
 
 # Then, we can instantiate the Genetic Hyperparameters.
-CX_PROBABILITY = 0.85
-CX_ALPHA = 0.35
-MUT_PROBABILITY = 0.42
+CX_PROBABILITY = 0.9
+CX_ALPHA = 0.09
+MUT_PROBABILITY = 0.52
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
-MUT_INDPB = 0.70
-POPULATION_SIZE = 10  # Individuals PER EACH ISLAND
-GENERATIONS = 20
+MUT_INDPB = 0.28
+POPULATION_SIZE = 8  # Individuals PER EACH ISLAND
+GENERATIONS = 30
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
 LAMBDA = 5  # literature advise to use LAMBDA=5-7
@@ -44,6 +44,16 @@ ALPHA_FITNESS_SHARING = 1.0
 # set it to 0.0 to disable the fitness sharing algorithm
 # If you are using the island model, DO NOT SET THIS over 0.
 NICHE_SIZE = 0.0
+
+def enemies_dir_name(enemies):
+    """
+    Converts a list of enemies into a string
+    """
+    dir_name = ""
+    for enemy in enemies:
+        dir_name += str(enemy) + "_"
+    return dir_name[:-1]
+
 
 
 class GeneticOptimizer:
@@ -259,7 +269,7 @@ class GeneticOptimizer:
         # Create the checkpoint directory  if it does not exist
         if not self.parallel:
             os.makedirs(
-                os.path.join(RUNS_DIR, "enemy_" + str(self.enemies), self.checkpoint),
+                os.path.join(RUNS_DIR, "enemy_" + enemies_dir_name(self.enemies), self.checkpoint),
                 exist_ok=True,
             )
 
@@ -272,7 +282,7 @@ class GeneticOptimizer:
 
         checkpoint_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(self.enemies),
+            "enemy_" + enemies_dir_name(self.enemies),
             self.checkpoint,
             self.checkpoint + "_run_" + str(self.run_number) + ".dat",
         )
@@ -698,7 +708,7 @@ class GeneticOptimizer:
 
                 checkpoint_path = os.path.join(
                     RUNS_DIR,
-                    "enemy_" + str(self.enemies),
+                    "enemy_" + enemies_dir_name(self.enemies),
                     self.checkpoint,
                     self.checkpoint + "_run_" + str(self.run_number) + ".dat",
                 )
@@ -734,7 +744,7 @@ def run_optimization(run_number, enemies):
         # save the best individual in the best_individual.txt file
         best_individual_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(enemies),
+            "enemy_" + enemies_dir_name(enemies),
             "best_individual_run_" + str(run_number) + ".txt",
         )
         np.savetxt(best_individual_path, best_individual["weights_and_biases"])
@@ -747,7 +757,7 @@ def run_optimization(run_number, enemies):
         logbook = optimizer.getLogbook()
         logbook_path = os.path.join(
             RUNS_DIR,
-            "enemy_" + str(enemies),
+            "enemy_" + enemies_dir_name(enemies),
             "logbook_run_" + str(run_number) + ".csv",
         )
         pd.DataFrame.from_dict(logbook, orient="index").to_csv(

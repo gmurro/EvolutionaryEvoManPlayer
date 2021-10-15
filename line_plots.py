@@ -8,11 +8,12 @@ from matplotlib import scale as mscale
 from matplotlib import transforms as mtransforms
 from matplotlib.ticker import FixedLocator, FuncFormatter
 
-ENEMY = 8
+ENEMY = "1_5_6"
+GENERATIONS = 3
 SPACE_LIM = 5
 ARANGE_SPACE = 10.0
-EA_DIR = "approach2"
-APPROACH_NAME = "Approach 2"
+EA_DIR = "ea1"
+APPROACH_NAME = "EA 1"
 COLOR_MEAN="red"
 COLOR_MAX="blue"
 RUNS_DIR = "runs"
@@ -25,6 +26,8 @@ def read_files(dir_path):
     """
     Read all the files in the folder and return a list of dataframes.
     """
+    print(glob.glob("ea1\\runs\\enemy_2_5_8\\*"))
+    [print(file) for file in glob.glob(os.path.join(dir_path, LOGBOOK_PATTERN+"*.csv"))]
     return [pd.read_csv(file, sep=";") for file in glob.glob(os.path.join(dir_path, LOGBOOK_PATTERN+"*.csv"))]
 
 
@@ -62,7 +65,7 @@ def line_plot(ea_stats):
     ax.fill_between(x, max_fitness_lower_bound, max_fitness_upper_bound, facecolor=COLOR_MAX, alpha=0.3,)
 
     min_y_lim = min([
-                        min(ea_stats['mean_avg_fitness'][1:])
+                        min(ea_stats['mean_avg_fitness'])
                    ]) - SPACE_LIM
     max_y_lim = max([
                         max(ea_stats['mean_max_fitness'])
@@ -70,11 +73,11 @@ def line_plot(ea_stats):
 
     ax.set_ylim(min_y_lim, max_y_lim)
     ax.legend(loc='best')
-    ax.set_title(f'Enemy {ENEMY} - {APPROACH_NAME}')
+    ax.set_title(f'Enemies {ENEMY} - {APPROACH_NAME}')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xlabel('generations')
     ax.set_ylabel('fitness')
-    ax.set_xticks(np.arange(0, 25, 2.0))
+    ax.set_xticks(np.arange(0, GENERATIONS, 2.0))
     ax.set_yticks(np.arange(np.floor(min_y_lim), np.ceil(max_y_lim), ARANGE_SPACE))
     ax.grid(linestyle="--")
     plt.show()
