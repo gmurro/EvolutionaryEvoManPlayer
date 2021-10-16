@@ -9,9 +9,9 @@ from matplotlib import transforms as mtransforms
 from matplotlib.ticker import FixedLocator, FuncFormatter
 
 # group of enemies trained on
-ENEMIES_TRAINING = [2, 5, 8]
+ENEMIES_TRAINING = [1, 5, 6]
 
-GENERATIONS = 3
+GENERATIONS = 30
 SPACE_LIM = 5
 ARANGE_SPACE = 10.0
 EA_DIR = "ea1"

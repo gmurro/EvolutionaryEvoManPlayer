@@ -65,7 +65,7 @@ for file in games_files:
     df_games['individual_gains'] = df_games['individual_gains'].map(lambda x: np.array(x).mean())
 
     # find max of the means of the individual_gains
-    id_max = df_games.idxmax()["individual_gains"]
+    id_max = df_games["individual_gains"].argmax()
     best_run = int(df_games.iloc[id_max]["n_run"])
     best_mean_gain = df_games.iloc[id_max]["individual_gains"]
 
