@@ -25,7 +25,7 @@ LAMBDA_REGULARIZATION = 0.01
 
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.9
-CX_ALPHA = 0.09
+CX_ALPHA = 0.56
 MUT_PROBABILITY = 0.52
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0

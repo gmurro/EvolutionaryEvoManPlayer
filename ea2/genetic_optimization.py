@@ -5,7 +5,7 @@ from game_runner import GameRunner
 import pickle
 import os
 from tqdm import tqdm
-from multilayer_controller import PlayerController
+from singlelayer_controller import PlayerController
 from scipy.spatial import distance_matrix
 from tabulate import tabulate
 import pandas as pd
@@ -16,19 +16,19 @@ N_RUN = 1
 RUNS_DIR = "runs"
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
-LAYER_NODES = [20, 20, 24, 5]
+LAYER_NODES = [20, 10, 5]
 # Then, we can instantiate the Genetic Hyperparameters.
 CX_PROBABILITY = 0.75
 CX_ALPHA = 0.45
-MUT_PROBABILITY = 0.8
+MUT_PROBABILITY = 0.65
 MUT_MU = 0
 MUT_STEP_SIZE = 1.0
 MUT_INDPB = 0.70
-POPULATION_SIZE = 50
+POPULATION_SIZE = 70
 GENERATIONS = 30
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
-LAMBDA = 5  # literature advise to use LAMBDA=5-7 ORIGINAL !
+LAMBDA =  5# literature advise to use LAMBDA=5-7
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6
@@ -510,8 +510,8 @@ class GeneticOptimizer:
 
     # Non-Domintated sorting GA: Implementation of NSGAII algorithm that uses non dominated pareto fronts and crowding to select the survivors
     def NSGA2_survivor_selection(self, pop):
-        for indiv in pop: print("fitness={}\tfitnesses={}\tind_gain={}".format(indiv['fitness'], indiv['fitnesses'],
-                                                                               indiv['individual_gain']))
+        # for indiv in pop: print("fitness={}\tfitnesses={}\tind_gain={}".format(indiv['fitness'], indiv['fitnesses'],
+        #                                                                        indiv['individual_gain']))
         out = []
 
         # calculate the sorted set F of non-dominated fronts
@@ -536,7 +536,7 @@ class GeneticOptimizer:
 
         if len(out) > self.population_size:
             out = out[0:self.population_size]
-        print("population size: {}".format(len(out)))
+
         return out
 
     def evolve(self):
@@ -630,16 +630,6 @@ class GeneticOptimizer:
             # (non-dominated sorting pareto front / crowding survivor selection )
             self.population = self.NSGA2_survivor_selection(offspring)
 
-            print(
-                "\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-            print("POPULATION AT END OF GENERATION=")
-            for indiv in self.population: print(
-                "fitness={}\tfitnesses={}\tindiv_gain={}\trank={}\tdistance={}".format(indiv['fitness'],
-                                                                                       indiv['fitnesses'],
-                                                                                       indiv['individual_gain'],
-                                                                                       indiv['rank'],
-                                                                                       indiv['dist']))
-
             # We save every SAVING_FREQUENCY generations.
             if g % SAVING_FREQUENCY == 0 and not self.parallel:
                 # Fill the dictionary using the dict(key=value[, ...]) constructor
@@ -674,7 +664,7 @@ def run_optimization(run_number, enemy):
     Runs the experiment
     """
     game_runner = GameRunner(
-        PlayerController(LAYER_NODES), enemies=enemy, headless=True
+        PlayerController(LAYER_NODES[1]), enemies=enemy, headless=True
     )
     optimizer = GeneticOptimizer(
         population_size=POPULATION_SIZE,
