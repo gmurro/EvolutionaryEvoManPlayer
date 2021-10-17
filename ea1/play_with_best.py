@@ -11,7 +11,7 @@ import glob
 import re
 
 # group of enemies trained on
-ENEMIES_TRAINING = [1, 5, 6]
+ENEMIES_TRAINING = [2, 5, 8]
 
 # enemies to play against
 ENEMIES_TEST = [1, 2, 3, 4, 5, 6, 7, 8]
