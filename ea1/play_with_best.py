@@ -10,6 +10,7 @@ import numpy as np
 import glob
 import re
 
+
 # group of enemies trained on
 ENEMIES_TRAINING = [2, 5, 8]
 
