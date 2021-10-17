@@ -10,6 +10,7 @@ import numpy as np
 import glob
 import re
 
+
 # group of enemies trained on
 ENEMIES_TRAINING = [2, 5, 8]
 
@@ -63,6 +64,9 @@ def play_game(env, best_individual):
     enemy_life_list = []
     time_list = []
 
+    # list of defeated enemies
+    defeated_enemies = []
+
     for enemy in ENEMIES_TEST:
         # Update the enemy
         env.update_parameter('enemies', [enemy])
@@ -73,8 +77,11 @@ def play_game(env, best_individual):
         enemy_life_list.append(enemy_life)
         time_list.append(time)
 
+        if player_life >= enemy_life:
+            defeated_enemies.append(enemy)
+
     # return the gain against all enemies
-    return sum(player_life_list) - sum(enemy_life_list)
+    return sum(player_life_list) - sum(enemy_life_list), defeated_enemies
 
 
 def main():
@@ -96,12 +103,17 @@ def main():
         best_individual = np.loadtxt(best_individual_path)
 
         # play the game N_GAMES times
-        individual_gains = [play_game(env, best_individual) for _ in range(N_GAMES)]
-        [print(f"\tgame {game} - gain = {individual_gain}") for game, individual_gain in enumerate(individual_gains)]
+        individual_gains = [0.]*N_GAMES
+        n_defeated_enemies = [0] * N_GAMES
+
+        for i in range(len(individual_gains)):
+            individual_gains[i], defeted_enemies = play_game(env, best_individual)
+            n_defeated_enemies[i] = len(defeted_enemies)
+            print(f"\tgame {i} - gain = {individual_gains[i]}, defeated_enemies = {len(defeted_enemies)} ({defeted_enemies})")
         print()
 
         # save the results of the games of the current run
-        logbook[n_run] = {"individual_gains":individual_gains}
+        logbook[n_run] = {"individual_gains":individual_gains, "defeated_enemies":n_defeated_enemies}
 
     logbook_path = os.path.join(RUNS_DIR, "enemy_" + enemies_dir_name(ENEMIES_TRAINING), "games_played.csv")
     pd.DataFrame.from_dict(logbook, orient='index').to_csv(logbook_path, index=True, index_label='n_run', sep=";")

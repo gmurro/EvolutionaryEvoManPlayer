@@ -3,8 +3,8 @@ from genetic_optimization import run_optimization
 
 START_RUN = 1
 END_RUN = 10
-#ENEMY = [2,5,8]
-ENEMY = [1,5,6]
+# ENEMY = [2, 5, 8]
+ENEMY = [1, 5, 6]
 
 
 def run_experiment(run_number):

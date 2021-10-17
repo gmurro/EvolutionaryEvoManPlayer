@@ -8,7 +8,7 @@ from ea1.singlelayer_controller import PlayerController
 sys.path.insert(0, "evoman")
 from environment import Environment
 
-
+N_GAMES = 5
 LAYER_NODES = [20, 10, 5]
 GAMES_FILE_NAME = "games_played.csv"
 BEST_INDIVIDUAL_PATTERN = "best_individual_run_"
@@ -16,35 +16,49 @@ BEST_INDIVIDUAL_PATTERN = "best_individual_run_"
 # enemies to play against
 ENEMIES_TEST = [1, 2, 3, 4, 5, 6, 7, 8]
 
-def init_env(path, layer_nodes):
-    """
-    Initializes environment for single objective mode with static enemy and ai player.
-    """
-    return
+
+def find_best(df, value1, value2):
+    """ Find the maximal value in the df sorting first according to value1 and then according to value2.
+    Return the index of the best. """
+    occurrences_max_value1 = np.where(
+        df[value1] == df[value1].max()
+    )[0]
+
+    return occurrences_max_value1[
+            np.argmax(df.iloc[occurrences_max_value1][value2])
+        ]
+
 
 
 def play_game(env, best_individual):
     """
-    Play a game against all enemies and return the individual gain of the execution.
+    Play a game against all enemies and return the tables of the results
     """
-    fitness_list = []
-    player_life_list = []
-    enemy_life_list = []
-    time_list = []
 
-    for enemy in ENEMIES_TEST:
+    games_df = pd.DataFrame({
+        "enemy" : pd.Series(dtype='str'),
+        "player_life" : pd.Series(dtype='float'),
+        "enemy_life": pd.Series(dtype='float')
+    })
+
+    for i, enemy in enumerate(ENEMIES_TEST):
+
+        player_life_list = np.zeros(N_GAMES)
+        enemy_life_list = np.zeros(N_GAMES)
+
         # Update the enemy
         env.update_parameter('enemies', [enemy])
 
-        fitness, player_life, enemy_life, time = env.play(best_individual)
-        fitness_list.append(fitness)
-        player_life_list.append(player_life)
-        enemy_life_list.append(enemy_life)
-        time_list.append(time)
+        for game in range(N_GAMES):
+            fitness, player_life, enemy_life, time = env.play(best_individual)
 
-    # return the gain against all enemies
-    return sum(player_life_list) - sum(enemy_life_list)
+            player_life_list[game] = player_life
+            enemy_life_list[game] = enemy_life
 
+        games_df.loc[i] = [enemy, round(player_life_list.mean(), 1), round(enemy_life_list.mean(), 1)]
+
+    # return the dataframe of the games against each enemy
+    return games_df
 
 
 # read all games files
@@ -53,33 +67,42 @@ for dirpath, dirnames, filenames in os.walk("."):
     for filename in [f for f in filenames if f == GAMES_FILE_NAME]:
         games_files.append(os.path.join(dirpath, filename))
 
-# dict of best individuals for each EA and for each group of enemies trained on
-all_bests = {}
+# dataframe of best individuals for each EA and for each group of enemies trained on
+all_bests = pd.DataFrame({'controller': pd.Series(dtype='str'),
+                          'individual_gains': pd.Series(dtype='float'),
+                          'defeated_enemies': pd.Series(dtype='float')})
 
-for file in games_files:
+for i, file in enumerate(games_files):
     df_games = pd.read_csv(file, sep=";")
-    # convert the element inside the column 'individual_gains' to an array
+    # convert the element inside the column 'individual_gains' and 'defeated_enemies' to an array
     df_games['individual_gains'] = df_games['individual_gains'].apply(literal_eval)
+    df_games['defeated_enemies'] = df_games['defeated_enemies'].apply(literal_eval)
 
-    # compute the mean of the individual_gains for each run
+    # compute the mean of the individual_gains and defeated_enemies for each run
     df_games['individual_gains'] = df_games['individual_gains'].map(lambda x: np.array(x).mean())
+    df_games['defeated_enemies'] = df_games['defeated_enemies'].map(lambda x: np.array(x, dtype=np.float32).mean())
 
-    # find max of the means of the individual_gains
-    id_max = df_games.idxmax()["individual_gains"]
+    # find max of the means of the defeated_enemies
+    id_max = find_best(df_games, 'defeated_enemies', 'individual_gains')
+
     best_run = int(df_games.iloc[id_max]["n_run"])
     best_mean_gain = df_games.iloc[id_max]["individual_gains"]
+    best_mean_defeated_enemies = df_games.iloc[id_max]["defeated_enemies"]
 
     # store the n run of the best and its gain
     controller_best = os.path.join(os.path.dirname(file), BEST_INDIVIDUAL_PATTERN+ str(best_run)+".txt")
-    all_bests[controller_best] = best_mean_gain
+    all_bests.loc[i] = [controller_best, best_mean_gain, best_mean_defeated_enemies]
 
 # find the best individual across all EAs
-best_for_competition = max(all_bests, key=all_bests.get)
-print(f"The best individual found is {best_for_competition} (mean of the gain = {round(all_bests[best_for_competition],2)})")
+id_best = find_best(all_bests, 'defeated_enemies', 'individual_gains')
+best_for_competition = all_bests.iloc[id_best]
+print(f"The best individual found is {best_for_competition['controller']} "
+      f"(gain = {round(best_for_competition['individual_gains'],2)}, "
+      f"defeated_enemies = {round(best_for_competition['defeated_enemies'],2)})")
 
 # initialize the environment
 env = Environment(
-        experiment_name=os.path.dirname(best_for_competition),
+        experiment_name=os.path.dirname(best_for_competition['controller']),
         playermode="ai",
         player_controller=PlayerController(LAYER_NODES[1]),
         speed="fastest",
@@ -90,3 +113,6 @@ env = Environment(
         sound="off",
         randomini="yes"
     )
+best_individual = np.loadtxt(best_for_competition['controller'])
+df = play_game(env, best_individual)
+print(df.to_latex())
