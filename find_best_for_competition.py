@@ -29,7 +29,6 @@ def find_best(df, value1, value2):
         ]
 
 
-
 def play_game(env, best_individual):
     """
     Play a game against all enemies and return the tables of the results
@@ -42,24 +41,54 @@ def play_game(env, best_individual):
         "games_won" : pd.Series(dtype='int')
     })
 
+    stats = {}
+
     for i, enemy in enumerate(ENEMIES_TEST):
 
         player_life_list = np.zeros(N_GAMES)
         enemy_life_list = np.zeros(N_GAMES)
+        fitness_list = np.zeros(N_GAMES)
         games_won = 0
 
         # Update the enemy
         env.update_parameter('enemies', [enemy])
 
+        print(f"Enemy {enemy}:")
         for game in range(N_GAMES):
             fitness, player_life, enemy_life, time = env.play(best_individual)
 
             player_life_list[game] = player_life
             enemy_life_list[game] = enemy_life
+            fitness_list[game] = fitness
             if player_life > enemy_life:
                  games_won += 1
+        print(f"\tavg fitness: {fitness_list.mean()}")
+        print(f"\tavg individual gain: {np.array([p - e for (p, e) in zip(player_life_list,enemy_life_list )]).mean()}")
+        print(f"\tgames won: {games_won}/{N_GAMES}")
 
-        games_df.loc[i] = [enemy, round(player_life_list.mean(), 1), round(enemy_life_list.mean(), 1), int(games_won/N_GAMES)]
+        stats[enemy] = {"fitness" : fitness_list,
+                        "player_life" : player_life_list,
+                        "enemy_life": enemy_life_list
+                        }
+        games_df.loc[i] = [enemy, round(player_life_list.mean(), 1), round(enemy_life_list.mean(), 1), int(games_won/N_GAMES * 100)]
+
+    final_gain = np.zeros(N_GAMES)
+    final_fitness = np.zeros(N_GAMES)
+    for game in range(N_GAMES):
+        sum_player_life = 0
+        sum_enemy_life = 0
+        fitness_multi = []
+        for enemy in ENEMIES_TEST:
+            sum_player_life += stats[enemy]["player_life"][game]
+            sum_enemy_life += stats[enemy]["enemy_life"][game]
+            fitness_multi.append(stats[enemy]["fitness"][game])
+
+        fitness_multi = np.array(fitness_multi)
+        final_gain[game] = sum_player_life - sum_enemy_life
+        final_fitness[game] = fitness_multi.mean() - fitness_multi.std()
+
+    print(f"Avg gain measure: {final_gain.mean()}")
+    print(f"Avg fitness measure: {final_fitness.mean()}\n")
 
     # return the dataframe of the games against each enemy
     return games_df
@@ -98,6 +127,7 @@ for i, file in enumerate(games_files):
     controller_best = os.path.join(os.path.dirname(file), BEST_INDIVIDUAL_PATTERN+ str(best_run)+".txt")
     all_bests.loc[i] = [controller_best, best_mean_gain, best_mean_defeated_enemies]
 
+
 # find the best individual across all EAs
 id_best = find_best(all_bests, 'defeated_enemies', 'individual_gains')
 best_for_competition = all_bests.iloc[id_best]
@@ -120,4 +150,4 @@ env = Environment(
     )
 best_individual = np.loadtxt(best_for_competition['controller'])
 df = play_game(env, best_individual)
-print(df.to_latex(index=False))
+print(df.T.to_latex(header=False))
