@@ -9,7 +9,7 @@ from ast import literal_eval
 import scipy.stats as stats
 
 # group of enemies trained on
-ENEMIES_TRAINING = [1, 5, 6]
+ENEMIES_TRAINING = [2, 5, 8]
 
 EA_DIRS = ["ea1", "ea2"]
 RUNS_DIR = "runs"
@@ -61,7 +61,7 @@ def main():
     t_statistic = stats.ttest_ind(df['Approach1'], df['Approach2'])
 
     # show box plot
-    sns.set(rc={'figure.figsize': (3,5)})
+    sns.set(rc={'figure.figsize': (5,5)})
     palette = {"Approach1": "blue", "Approach2": "red"}
     ax = sns.boxplot(data = df, palette=palette)
     ax.set(ylabel='Individual gain'
