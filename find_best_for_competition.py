@@ -38,13 +38,15 @@ def play_game(env, best_individual):
     games_df = pd.DataFrame({
         "enemy" : pd.Series(dtype='str'),
         "player_life" : pd.Series(dtype='float'),
-        "enemy_life": pd.Series(dtype='float')
+        "enemy_life": pd.Series(dtype='float'),
+        "games_won" : pd.Series(dtype='int')
     })
 
     for i, enemy in enumerate(ENEMIES_TEST):
 
         player_life_list = np.zeros(N_GAMES)
         enemy_life_list = np.zeros(N_GAMES)
+        games_won = 0
 
         # Update the enemy
         env.update_parameter('enemies', [enemy])
@@ -54,8 +56,10 @@ def play_game(env, best_individual):
 
             player_life_list[game] = player_life
             enemy_life_list[game] = enemy_life
+            if player_life > enemy_life:
+                 games_won += 1
 
-        games_df.loc[i] = [enemy, round(player_life_list.mean(), 1), round(enemy_life_list.mean(), 1)]
+        games_df.loc[i] = [enemy, round(player_life_list.mean(), 1), round(enemy_life_list.mean(), 1), int(games_won/N_GAMES)]
 
     # return the dataframe of the games against each enemy
     return games_df
@@ -70,7 +74,8 @@ for dirpath, dirnames, filenames in os.walk("."):
 # dataframe of best individuals for each EA and for each group of enemies trained on
 all_bests = pd.DataFrame({'controller': pd.Series(dtype='str'),
                           'individual_gains': pd.Series(dtype='float'),
-                          'defeated_enemies': pd.Series(dtype='float')})
+                          'defeated_enemies': pd.Series(dtype='float')
+                          })
 
 for i, file in enumerate(games_files):
     df_games = pd.read_csv(file, sep=";")
@@ -115,4 +120,4 @@ env = Environment(
     )
 best_individual = np.loadtxt(best_for_competition['controller'])
 df = play_game(env, best_individual)
-print(df.to_latex())
+print(df.to_latex(index=False))

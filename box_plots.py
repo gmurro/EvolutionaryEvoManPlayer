@@ -9,7 +9,7 @@ from ast import literal_eval
 import scipy.stats as stats
 
 # group of enemies trained on
-ENEMIES_TRAINING = [2, 5, 8]
+ENEMIES_TRAINING = [1, 5, 6]
 
 EA_DIRS = ["ea1", "ea2"]
 RUNS_DIR = "runs"
