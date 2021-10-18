@@ -59,11 +59,5 @@ class PlayerController(Controller):
         # takes decisions about sprite actions
         actions = [1 if score > 0.5 else 0 for score in output]
 
-        # Going left/right and jumping/releasing are exclusive!
-        if actions[0] or actions[1]:
-            (actions[0], actions[1]) = (1, 0) if output[0] > output[1] else (0, 1)
-        if actions[2] or actions[4]:
-            (actions[2], actions[4]) = (1, 0) if output[2] > output[4] else (0, 1)
-
         # [left, right, jump, shoot, release]
         return actions
