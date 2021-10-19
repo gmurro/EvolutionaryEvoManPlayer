@@ -3,6 +3,9 @@
 This repository contains a project realized as part of the *Evolutionary Computing* course of the Master's degree in Artificial Intelligence, Vrije Universiteit Amsterdam.     
 The aim of this project is compare two **Evolutionary Algorithms** for the task of video game playing using a python framework called EvoMan.
 The two EA methods train a *generalist agent* that should be able to play agains the different 8 enemies of the game.
+For more details, read the [task assigment](standard_assignment_taskII.pdf).
+The proposed solution is describer in the [report](report/report.pdf).
+
 
 ### Approach 1
 
