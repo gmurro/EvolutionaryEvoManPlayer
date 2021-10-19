@@ -11,8 +11,8 @@ from tabulate import tabulate
 import pandas as pd
 from functools import cmp_to_key
 
-N_RUN = 1
-# ENEMY = 2
+N_RUN = 11
+ENEMY = [2, 5, 6]
 RUNS_DIR = "runs"
 
 # We can now fix the number of nodes to be used in our NN. The first HAS TO BE the number of inputs.
@@ -28,7 +28,7 @@ POPULATION_SIZE = 70
 GENERATIONS = 30
 SAVING_FREQUENCY = 3
 TOURNSIZE = 7
-LAMBDA =  5# literature advise to use LAMBDA=5-7
+LAMBDA =  5 # literature advise to use LAMBDA=5-7
 MIN_VALUE_INDIVIDUAL = -1
 MAX_VALUE_INDIVIDUAL = 1
 EPSILON_UNCORRELATED_MUTATION = 1.0e-6

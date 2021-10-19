@@ -150,4 +150,7 @@ env = Environment(
     )
 best_individual = np.loadtxt(best_for_competition['controller'])
 df = play_game(env, best_individual)
-print(df.T.to_latex(header=False))
+df = df.T
+df.columns = df.iloc[0]
+df = df[1:]
+print(df.to_markdown())
