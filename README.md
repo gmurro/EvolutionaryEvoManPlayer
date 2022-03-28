@@ -40,6 +40,8 @@ Group of enemies trained on:
 The best individual found is `ea2/runs/enemy_1_5_6/best_individual_run_5.txt`, it is trained on the group of enemies [1, 5, 6] and it is able to defeat up to 5 enemies.
 To have a deeper insight on the graphs, check out the `plots` folder.
 
+![Run](./video.gif)
+
 ## Group members - 88
 
 |  Name     |  Surname  |     Email                              |    Username      |
